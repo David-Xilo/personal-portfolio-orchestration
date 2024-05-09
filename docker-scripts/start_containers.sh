@@ -4,15 +4,15 @@
 
 # DB
 
-docker build -t safehouse-db /../../safehouse-db-schema
+docker build -t safehouse-db ../../safehouse-db-schema
 
 # Backend
 
-docker build -t safehouse-back /../../safehouse-tech-back
+docker build -t safehouse-tech-back ../../safehouse-tech-back
 
 # Frontend
 
-docker build -t safehouse-front /../../safehouse-main-front
+docker build -t safehouse-main-front ../../safehouse-main-front
 
 
 # Start DB container
@@ -28,10 +28,10 @@ docker run -d \
 
 # Start backend container
 
-docker run --name safehouse-back-container -p 4000:4000 -d safehouse-back
+docker run --name safehouse-tech-back-container -p 4000:4000 -d safehouse-tech-back
 
 # Start frontend container
 
-docker run --name safehouse-front-container -p 3000:3000 -d safehouse-front
+docker run --name safehouse-main-front-container -p 3000:3000 -d safehouse-main-front
 
 echo "All containers started successfully."
