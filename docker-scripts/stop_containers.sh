@@ -1,26 +1,17 @@
 #!/bin/bash
 
-# Stop Containers
+# Stop containers
+docker stop safehouse-main-front-container || true
+docker stop safehouse-tech-back-container || true
+docker stop safehouse-db-container || true
 
-# Frontend
+# Remove containers
+docker rm safehouse-main-front-container || true
+docker rm safehouse-tech-back-container || true
+docker rm safehouse-db-container || true
 
-docker stop safehouse-main-front-container
+# Remove the Docker network
+docker network rm safehouse-db-network || true
 
-docker rm safehouse-main-front-container
+echo "Network and containers have been removed successfully."
 
-
-# Backend
-
-docker stop safehouse-tech-back-container
-
-docker rm safehouse-tech-back-container
-
-
-# DB container
-
-docker stop safehouse-db-container
-
-docker rm safehouse-db-container
-
-
-echo "All containers stopped successfully."
