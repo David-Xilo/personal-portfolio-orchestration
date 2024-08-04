@@ -31,8 +31,19 @@ docker run -d \
   -e POSTGRES_USER=safehouse-main-user \
   -e POSTGRES_PASSWORD=mypassword \
   -p 5432:5432 \
-  -v my_postgres_volume:/var/lib/postgresql/data \
+  -v safehouse_postgres_volume:/var/lib/postgresql/data \
   safehouse-db
+
+echo "Waiting for PostgreSQL to be ready (timeout: 30s)..."
+timeout=30
+while ! docker exec safehouse-db-container pg_isready -U safehouse-main-user -d safehouse-main-db; do
+  sleep 1
+  timeout=$((timeout - 1))
+  if [ $timeout -le 0 ]; then
+    echo "Timeout reached. PostgreSQL is not ready."
+    exit 1
+  fi
+done
 
 # Start backend container
 docker run --network safehouse-db-network --name safehouse-tech-back-container -p 4000:4000 -d safehouse-tech-back
