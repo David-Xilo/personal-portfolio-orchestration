@@ -18,4 +18,12 @@ docker exec -it safehouse-tech-back-container /bin/bash
 
 docker exec -it safehouse-main-front-container /bin/bash
 
+# debugging DB
+
+After shelling the container
+
+psql -h <host> -U <user> -d <db_name>
+
+to check tables:
+\dt
 
