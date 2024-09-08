@@ -14,9 +14,9 @@ docker logs safehouse-main-front-container -f
 
 docker exec -it safehouse-db-container /bin/bash
 
-docker exec -it safehouse-tech-back-container /bin/bash
+docker exec -it safehouse-tech-back-container /bin/sh
 
-docker exec -it safehouse-main-front-container /bin/bash
+docker exec -it safehouse-main-front-container /bin/sh
 
 # debugging DB
 
