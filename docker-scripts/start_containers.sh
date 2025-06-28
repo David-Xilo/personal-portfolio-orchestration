@@ -46,7 +46,7 @@ while ! docker exec safehouse-db-container pg_isready -U safehouse-main-user -d 
 done
 
 # Start backend container
-docker run --network safehouse-db-network --name safehouse-main-back-container -p 4000:4000 -d safehouse-main-back
+docker run -e ENV=development -e FRONTEND_URL=http://localhost:3000 --network safehouse-db-network --name safehouse-main-back-container -p 4000:4000 -d safehouse-main-back
 
 # Start frontend container
 docker run --name safehouse-main-front-container -p 3000:3000 -d safehouse-main-front
