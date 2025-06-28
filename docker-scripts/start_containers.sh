@@ -27,8 +27,8 @@ docker build -t safehouse-main-front ../../safehouse-main-front
 docker run -d \
   --network safehouse-db-network \
   --name safehouse-db-container \
-  -e POSTGRES_DB=safehouse-main-db \
-  -e POSTGRES_USER=safehouse-main-user \
+  -e POSTGRES_DB=dev_db \
+  -e POSTGRES_USER=dev_user \
   -e POSTGRES_PASSWORD=mypassword \
   -p 5432:5432 \
   -v safehouse_postgres_volume:/var/lib/postgresql/data \
@@ -36,7 +36,7 @@ docker run -d \
 
 echo "Waiting for PostgreSQL to be ready (timeout: 30s)..."
 timeout=30
-while ! docker exec safehouse-db-container pg_isready -U safehouse-main-user -d safehouse-main-db; do
+while ! docker exec safehouse-db-container pg_isready -U dev_user -d dev_db; do
   sleep 1
   timeout=$((timeout - 1))
   if [ $timeout -le 0 ]; then
@@ -46,7 +46,7 @@ while ! docker exec safehouse-db-container pg_isready -U safehouse-main-user -d 
 done
 
 # Start backend container
-docker run -e ENV=development -e FRONTEND_URL=http://localhost:3000 --network safehouse-db-network --name safehouse-main-back-container -p 4000:4000 -d safehouse-main-back
+docker run -e ENV=development -e DATABASE_URL=postgres://dev_user:mypassword@safehouse-db-container:5432/dev_db?sslmode=disable -e FRONTEND_URL=http://localhost:3000 --network safehouse-db-network --name safehouse-main-back-container -p 4000:4000 -d safehouse-main-back
 
 # Start frontend container
 docker run --name safehouse-main-front-container -p 3000:3000 -d safehouse-main-front
