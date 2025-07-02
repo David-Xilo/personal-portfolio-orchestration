@@ -117,7 +117,7 @@ start_postgres() {
     fi
 
     print_status "Building and starting new PostgreSQL container"
-    docker build -t ${POSTGRES_CONTAINER} ${POSTGRES_DOCKERFILE}
+    docker build -t ${POSTGRES_IMAGE} ${POSTGRES_DOCKERFILE}
     print_status "PostgreSQL Built"
     docker run -d \
         --name ${POSTGRES_CONTAINER} \
@@ -129,7 +129,7 @@ start_postgres() {
         -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
         -e POSTGRES_LISTEN_ADDRESSES='*' \
         -v ${POSTGRES_VOLUME}:/var/lib/postgresql/data \
-        ${POSTGRES_CONTAINER}
+        ${POSTGRES_IMAGE}
 
     wait_for_postgres
 }
@@ -141,7 +141,7 @@ run_migrations() {
     local original_dir=$(pwd)
 
     print_status "Building migration container"
-    docker build -t "${MIGRATION_CONTAINER}" ${MIGRATION_DOCKERFILE}
+    docker build -t "${MIGRATION_IMAGE}" ${MIGRATION_DOCKERFILE}
 
     # Run migrations
     print_status "Applying database migrations..."
@@ -156,7 +156,7 @@ run_migrations() {
         -e POSTGRES_USER=${POSTGRES_USER} \
         -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
         -e POSTGRES_DB=${POSTGRES_DB} \
-        ${MIGRATION_CONTAINER} up
+        ${MIGRATION_IMAGE} up
 
     cd "${original_dir}"
 
@@ -178,7 +178,7 @@ start_backend() {
     print_status "Starting backend container..."
     docker run \
       -e ENV=development \
-      -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_CONTAINER}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
+      -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
       -e FRONTEND_URL=${FRONTEND_URL} \
       --network ${NETWORK_NAME} \
       --name ${BACKEND_CONTAINER} \
@@ -197,7 +197,7 @@ start_frontend() {
         return 0
     fi
 
-    print_status "Build backend container..."
+    print_status "Build frontend container..."
     docker build -t ${FRONTEND_IMAGE} ${FRONTEND_DOCKERFILE}
 
     print_status "Starting frontend container..."
@@ -263,7 +263,7 @@ migration_command() {
         -e POSTGRES_USER=${POSTGRES_USER} \
         -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
         -e POSTGRES_DB=${POSTGRES_DB} \
-        ${MIGRATION_CONTAINER} "$@"
+        ${MIGRATION_IMAGE} "$@"
 }
 
 # Main command handling
@@ -279,7 +279,6 @@ case "${1:-start}" in
         start_backend
         start_frontend
         print_status "Development environment is ready!"
-        show_status
         ;;
     "stop")
         stop_services
