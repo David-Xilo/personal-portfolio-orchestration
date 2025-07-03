@@ -25,8 +25,8 @@ BACKEND_CONTAINER="safehouse_backend"
 FRONTEND_CONTAINER="safehouse_frontend"
 
 # Dockerfiles location
-POSTGRES_DOCKERFILE="../postgresql"
-MIGRATION_DOCKERFILE="../../safehouse-db-schema"
+POSTGRES_DOCKERFILE="../../safehouse-db-schema/postgresql"
+MIGRATION_DOCKERFILE="../../safehouse-db-schema/schema"
 BACKEND_DOCKERFILE="../../safehouse-main-back"
 FRONTEND_DOCKERFILE="../../safehouse-main-front"
 
