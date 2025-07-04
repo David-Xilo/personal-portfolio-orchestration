@@ -88,7 +88,7 @@ else
     echo "Database password secret not found"
 fi
 
-if gcloud secrets describe portfolio-database-url --quiet 2>/dev/null; then
+if gcloud secrets describe safehouse-database-url --quiet 2>/dev/null; then
     echo "Database URL secret exists"
 else
     echo "Database URL secret not found"
@@ -111,7 +111,7 @@ else
     echo "Cloud Run missing access to database password secret"
 fi
 
-if gcloud secrets get-iam-policy portfolio-database-url \
+if gcloud secrets get-iam-policy safehouse-database-url \
     --filter="bindings.members:serviceAccount:portfolio-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com" \
     --format="value(bindings.role)" | grep -q "roles/secretmanager.secretAccessor"; then
     echo "Cloud Run has access to database URL secret"

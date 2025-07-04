@@ -1,6 +1,6 @@
 output "cloud_run_url" {
   description = "The URL of the Cloud Run service"
-  value       = google_cloud_run_service.app.status[0].url
+  value       = google_cloud_run_service.safehouse_app.status[0].url
 }
 
 output "database_private_ip" {
