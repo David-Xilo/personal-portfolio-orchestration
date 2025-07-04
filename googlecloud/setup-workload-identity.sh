@@ -1,10 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "🔐 Setting up Workload Identity..."
+SERVICE_ACCOUNT="safehouse-terraform-cicd"
+SERVICE_ACCOUNT_FULL="safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com"
+PROJECT_ID="personal-portfolio-safehouse"
 
-# Enable required APIs
-echo "📋 Enabling required APIs..."
+echo "Setting up Workload Identity..."
+
+echo "Enabling required APIs..."
 gcloud services enable compute.googleapis.com
 gcloud services enable servicenetworking.googleapis.com
 gcloud services enable vpcaccess.googleapis.com
@@ -12,17 +15,17 @@ gcloud services enable iamcredentials.googleapis.com
 gcloud services enable sts.googleapis.com
 gcloud services enable cloudresourcemanager.googleapis.com
 
-echo "🏊 Creating Workload Identity Pool..."
+echo "Creating Workload Identity Pool..."
 if ! gcloud iam workload-identity-pools describe safehouse-github-pool --location="global" --quiet 2>/dev/null; then
     gcloud iam workload-identity-pools create safehouse-github-pool \
         --location="global" \
         --display-name="GitHub Actions Pool"
-    echo "✅ Workload Identity Pool created"
+    echo "Workload Identity Pool created"
 else
-    echo "✅ Workload Identity Pool already exists"
+    echo "Workload Identity Pool already exists"
 fi
 
-echo "🔗 Creating Workload Identity Provider..."
+echo "Creating Workload Identity Provider..."
 if ! gcloud iam workload-identity-pools providers describe safehouse-github-provider \
     --location="global" \
     --workload-identity-pool=safehouse-github-pool --quiet 2>/dev/null; then
@@ -39,51 +42,54 @@ else
     echo "✅ Workload Identity Provider already exists"
 fi
 
-echo "👤 Creating Service Account..."
-if ! gcloud iam service-accounts describe safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com --quiet 2>/dev/null; then
-    gcloud iam service-accounts create safehouse-terraform-cicd \
+echo "Creating Service Account..."
+if ! gcloud iam service-accounts describe ${SERVICE_ACCOUNT_FULL} --quiet 2>/dev/null; then
+    gcloud iam service-accounts create ${SERVICE_ACCOUNT} \
         --display-name="Terraform CI/CD Service Account"
-    echo "✅ Service Account created"
+    echo "Service Account created"
 else
-    echo "✅ Service Account already exists"
+    echo "Service Account already exists"
 fi
 
 echo "🔑 Granting permissions to Service Account..."
 
-# Core permissions
-gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
-    --member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
-    --role="roles/editor"
-
 # Specific service permissions
-gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
-    --member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/cloudsql.admin"
 
-gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
-    --member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/run.admin"
 
-gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
-    --member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
-    --role="roles/secretmanager.secretAccessor"
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --role="roles/secretmanager.admin"
 
-# Networking permissions (required for VPC and private networking)
-gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
-    --member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+# Networking permissions
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/compute.networkAdmin"
 
-gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
-    --member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/servicenetworking.networkAdmin"
 
-echo "✅ Permissions granted"
+# Storage for audit logs
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --role="roles/storage.admin"
 
-echo ""
-echo "🎉 Workload Identity setup complete!"
-echo ""
-echo "Next steps:"
-echo "1. Run ./bind-repository.sh <repository-name> for each repository"
-echo "2. Run ./verify-setup.sh to verify everything is configured correctly"
-echo "3. Run ./setup-secrets.sh to create required secrets"
-echo "4. Run ./deploy.sh to deploy your infrastructure"
+# Logging configuration
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --role="roles/logging.configWriter"
+
+# Service usage (for API management)
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --role="roles/serviceusage.serviceUsageAdmin"
+
+echo "Permissions granted"
+
+echo "Workload Identity setup complete!"
