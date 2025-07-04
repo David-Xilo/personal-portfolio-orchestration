@@ -51,9 +51,7 @@ run_terraform() {
 
     rm -f tfplan
 
-    if [ -f "/tmp/terraform-key.json" ]; then
-        rm -f /tmp/terraform-key.json
-    fi
+# Removed unnecessary cleanup block for /tmp/terraform-key.json
 }
 
 main() {
