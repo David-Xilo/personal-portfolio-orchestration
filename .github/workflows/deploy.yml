@@ -1,0 +1,218 @@
+name: Infrastructure Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+      confirm_apply:
+        description: 'Type "yes" to confirm apply/destroy'
+        required: false
+        default: 'no'
+        type: string
+
+jobs:
+  validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
+          service_account: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Format Check
+        run: |
+          cd terraform
+          terraform fmt -check
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd terraform
+          terraform validate
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
+          service_account: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "Planning DESTROY operation..."
+            terraform plan -destroy -out=tfplan
+          else
+            echo "Planning infrastructure changes..."
+            terraform plan -out=tfplan
+          fi
+
+      - name: Show Plan Summary
+        run: |
+          cd terraform
+          echo "## Terraform Plan Summary"
+          echo "**Action:** ${{ github.event.inputs.action }}"
+          echo "**Environment:** ${{ github.event.inputs.environment }}"
+          echo "**Triggered by:** @${{ github.actor }}"
+          echo ""
+          terraform show -no-color tfplan
+
+      - name: Upload Plan Artifact
+        if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_number }}
+          path: terraform/tfplan
+          retention-days: 7
+
+  # Apply job - only runs for apply/destroy actions with confirmation
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply == 'yes'
+    environment: ${{ github.event.inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
+          service_account: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_number }}
+          path: terraform/
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "DESTROYING infrastructure..."
+            echo "This will DELETE all resources!"
+            terraform apply tfplan
+          else
+            echo "Applying infrastructure changes..."
+            terraform apply tfplan
+          fi
+
+      - name: Terraform Output
+        if: github.event.inputs.action == 'apply'
+        id: output
+        run: |
+          cd terraform
+          echo "## 📊 Terraform Outputs"
+          terraform output
+
+      - name: Notify Success
+        if: success()
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "🗑️ Infrastructure destruction completed successfully!"
+            echo "All resources have been removed."
+          else
+            echo "✅ Infrastructure deployment completed successfully!"
+            echo "🔗 Check outputs above for service URLs and details."
+          fi
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Infrastructure ${{ github.event.inputs.action }} failed!"
+          echo "Check the logs above for details."
+          exit 1
+
+  # Safety check job - warns about destructive actions
+  safety_check:
+    name: Safety Check
+    runs-on: ubuntu-latest
+    if: github.event.inputs.action == 'apply' && github.event.inputs.confirm_apply != 'yes'
+
+    steps:
+      - name: Safety Warning
+        run: |
+          echo "SAFETY CHECK FAILED"
+          echo ""
+          echo "You selected 'apply' but didn't confirm with 'yes'"
+          echo ""
+          echo "To deploy infrastructure:"
+          echo "1. Set 'Action' to 'apply'"
+          echo "2. Set 'Type yes to confirm' to 'yes'"
+          echo "3. Run the workflow again"
+          echo ""
+          echo "This prevents accidental deployments!"
+          exit 1

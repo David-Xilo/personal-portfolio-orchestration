@@ -1,29 +1,18 @@
 # safehouse-orchestration
 safehouse orchestration
 
+# Setup commands
 
-## see logs
+### 1. One-time setup (creates infrastructure)
+./setup-workload-identity.sh
 
-docker logs safehouse-db-container -f
+### 2. Bind each repository (run for each repo)
+./bind-repository.sh safehouse-main-back
+./bind-repository.sh safehouse-main-front  
+./bind-repository.sh safehouse-db-schema
+./bind-repository.sh safehouse-orchestration
 
-docker logs safehouse-main-back-container -f
+### 3. Verify (optional, anytime)
+./verify-setup.sh
 
-docker logs safehouse-main-front-container -f
-
-## shell the container
-
-docker exec -it safehouse-db-container /bin/bash
-
-docker exec -it safehouse-main-back-container /bin/sh
-
-docker exec -it safehouse-main-front-container /bin/sh
-
-# debugging DB
-
-After shelling the container
-
-psql -h <host> -U <user> -d <db_name>
-
-to check tables:
-\dt
 
