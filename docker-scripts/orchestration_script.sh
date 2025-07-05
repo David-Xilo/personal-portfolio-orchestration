@@ -3,35 +3,30 @@
 
 set -e
 
-# Configuration - adjust these paths to match your project structure
 NETWORK_NAME="safehouse_dev_network"
 
-
-# URLs
 FRONTEND_URL=http://localhost:3000
 BACKEND_PORT=4000
 FRONTEND_PORT=3000
 
-# Images
 POSTGRES_IMAGE="safehouse_postgres_dev_image"
 MIGRATION_IMAGE="safehouse_migrations_image"
 BACKEND_IMAGE="safehouse_backend_image"
 FRONTEND_IMAGE="safehouse_frontend_image"
 
-# Container configurations
 POSTGRES_CONTAINER="safehouse_postgres_dev"
 MIGRATION_CONTAINER="safehouse_migrations"
 BACKEND_CONTAINER="safehouse_backend"
 FRONTEND_CONTAINER="safehouse_frontend"
 
-# Dockerfiles location
 POSTGRES_DOCKERFILE="../../safehouse-db-schema/postgresql"
-MIGRATION_DOCKERFILE="../../safehouse-db-schema/schema"
+MIGRATION_DOCKERFILE="../../safehouse-db-schema/schema/dev/Dockerfile"
 BACKEND_DOCKERFILE="../../safehouse-main-back"
 FRONTEND_DOCKERFILE="../../safehouse-main-front"
 
-# Database configuration
-POSTGRES_HOST="postgres-dev"  # This is the hostname within the Docker network
+MIGRATION_CONTEXT="../../safehouse-db-schema/schema"
+
+POSTGRES_HOST="postgres-dev"
 POSTGRES_PORT="5432"
 POSTGRES_USER="dev_user"
 POSTGRES_PASSWORD="mypassword"
@@ -39,17 +34,14 @@ POSTGRES_DB="dev_db"
 
 POSTGRES_VOLUME=safehouse_postgres_volume
 
-
 NETWORK_ALIAS=${POSTGRES_HOST}
 
-# Colors for output formatting
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Function to print colored output
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -66,17 +58,14 @@ print_section() {
     echo -e "\n${BLUE}=== $1 ===${NC}"
 }
 
-# Function to check if a container exists
 container_exists() {
     docker ps -a --format '{{.Names}}' | grep -q "^$1$"
 }
 
-# Function to check if a container is running
 container_running() {
     docker ps --format '{{.Names}}' | grep -q "^$1$"
 }
 
-# Function to wait for PostgreSQL to be ready
 wait_for_postgres() {
     print_status "Waiting for PostgreSQL to be ready..."
     local max_attempts=30
@@ -97,7 +86,6 @@ wait_for_postgres() {
     return 1
 }
 
-# Function to create the development network
 create_network() {
     if docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}$"; then
         print_status "Network ${NETWORK_NAME} already exists"
@@ -107,7 +95,6 @@ create_network() {
     fi
 }
 
-# Function to build and start PostgreSQL container
 start_postgres() {
     print_section "Starting PostgreSQL Development Database"
 
@@ -134,19 +121,16 @@ start_postgres() {
     wait_for_postgres
 }
 
-# Function to run database migrations
 run_migrations() {
     print_section "Running Database Migrations"
 
     local original_dir=$(pwd)
 
     print_status "Building migration container"
-    docker build -t "${MIGRATION_IMAGE}" ${MIGRATION_DOCKERFILE}
+    docker build -f ${MIGRATION_DOCKERFILE} -t "${MIGRATION_IMAGE}" ${MIGRATION_CONTEXT}
 
-    # Run migrations
     print_status "Applying database migrations..."
     print_status "changing to migrations directory"
-    cd ${MIGRATION_DOCKERFILE}
     pwd
     print_status "applying migrations"
     docker run --rm \
@@ -163,7 +147,6 @@ run_migrations() {
     print_status "Migrations completed successfully"
 }
 
-# Function to start backend services
 start_backend() {
     print_section "Starting Backend Services"
 
@@ -188,7 +171,6 @@ start_backend() {
     print_warning "Backend startup command needs to be configured based on your specific setup"
 }
 
-# Function to start frontend services
 start_frontend() {
     print_section "Starting Frontend Services"
 
@@ -210,7 +192,6 @@ start_frontend() {
 
 }
 
-# Function to stop all services
 stop_services() {
     print_section "Stopping Development Environment"
 
@@ -219,19 +200,16 @@ stop_services() {
     docker stop ${POSTGRES_CONTAINER} || true
     docker stop ${MIGRATION_CONTAINER} || true
 
-    # Remove containers
     docker rm ${FRONTEND_CONTAINER} || true
     docker rm ${BACKEND_CONTAINER} || true
     docker rm ${POSTGRES_CONTAINER} || true
     docker rm ${MIGRATION_CONTAINER} || true
 
-    # Remove the Docker network
     docker network rm ${NETWORK_NAME} || true
 
     print_status "Network and containers have been removed successfully."
 }
 
-# Function to clean up everything
 cleanup() {
     print_section "Cleaning Up Development Environment"
 
@@ -242,7 +220,6 @@ cleanup() {
     print_status "Cleanup completed"
 }
 
-# Function to run a one-off migration command
 migration_command() {
     if [ -z "$1" ]; then
         print_error "Usage: $0 migrate <command>"
@@ -266,7 +243,6 @@ migration_command() {
         ${MIGRATION_IMAGE} "$@"
 }
 
-# Main command handling
 case "${1:-start}" in
     "start")
         print_section "Starting Complete Development Environment"
@@ -296,7 +272,7 @@ case "${1:-start}" in
         cleanup
         ;;
     "migrate")
-        shift # Remove 'migrate' from arguments
+        shift
         migration_command "$@"
         ;;
     "help")
