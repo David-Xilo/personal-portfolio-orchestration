@@ -300,11 +300,20 @@ resource "google_sql_database" "safehouse_db" {
   instance = google_sql_database_instance.main.name
 }
 
+resource "time_rotating" "pw_trigger" {
+  rotation_minutes = 1440 # 24h
+}
+
 # Create database user
 resource "google_sql_user" "db_user" {
   name     = "safehouse_db_user"
   instance = google_sql_database_instance.main.name
   password = data.google_secret_manager_secret_version.db_password.secret_data
+  
+  lifecycle {
+    ignore_changes = [password]
+    replace_triggered_by = [time_rotating.pw_trigger.id]
+  }
 }
 
 # Secret for database connection URL (more secure than env var)
@@ -321,6 +330,11 @@ resource "google_secret_manager_secret" "database_url" {
 resource "google_secret_manager_secret_version" "database_url" {
   secret = google_secret_manager_secret.database_url.id
   secret_data = "postgresql://${google_sql_user.db_user.name}:${data.google_secret_manager_secret_version.db_password.secret_data}@${google_sql_database_instance.main.private_ip_address}:5432/${google_sql_database.safehouse_db.name}"
+  
+  lifecycle {
+    ignore_changes = [secret_data]
+    replace_triggered_by = [time_rotating.pw_trigger.id]
+  }
 }
 
 resource "google_storage_bucket" "audit_logs" {
