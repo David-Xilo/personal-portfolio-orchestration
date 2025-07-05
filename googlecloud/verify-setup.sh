@@ -4,18 +4,32 @@ set -e
 echo "Checking required APIs..."
 required_apis=(
     "compute.googleapis.com"
-    "servicenetworking.googleapis.com"
-    "vpcaccess.googleapis.com"
-    "iamcredentials.googleapis.com"
-    "sts.googleapis.com"
-    "cloudresourcemanager.googleapis.com"
-    "secretmanager.googleapis.com"
+    "servicenetworking.googleapis.com" 
     "run.googleapis.com"
     "sqladmin.googleapis.com"
     "containerregistry.googleapis.com"
+    "secretmanager.googleapis.com"
+    "vpcaccess.googleapis.com"
 )
 
+workload_identity_apis=(
+    "iamcredentials.googleapis.com"
+    "sts.googleapis.com"
+    "cloudresourcemanager.googleapis.com"
+)
+
+echo "=== Core APIs (enabled by Terraform) ==="
 for api in "${required_apis[@]}"; do
+    if gcloud services list --enabled --filter="name:$api" --format="value(name)" | grep -q "$api"; then
+        echo "$api enabled"
+    else
+        echo "$api not enabled"
+    fi
+done
+
+echo ""
+echo "=== Workload Identity APIs ==="
+for api in "${workload_identity_apis[@]}"; do
     if gcloud services list --enabled --filter="name:$api" --format="value(name)" | grep -q "$api"; then
         echo "$api enabled"
     else
@@ -58,16 +72,17 @@ else
 fi
 
 echo ""
-echo "Checking Service Account permissions..."
+echo "=== Service Account Permissions ==="
 required_roles=(
-    "roles/cloudsql.admin"
-    "roles/run.admin"
-    "roles/secretmanager.admin"
+    "roles/cloudsql.editor"
+    "roles/run.developer"
+    "roles/secretmanager.secretAccessor"
     "roles/compute.networkAdmin"
     "roles/servicenetworking.networkAdmin"
-    "roles/storage.admin"
+    "roles/storage.objectAdmin"
     "roles/logging.configWriter"
     "roles/serviceusage.serviceUsageAdmin"
+    "roles/containeranalysis.admin"
 )
 
 for role in "${required_roles[@]}"; do
