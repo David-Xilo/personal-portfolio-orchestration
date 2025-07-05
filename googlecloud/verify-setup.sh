@@ -49,6 +49,14 @@ else
     echo "Service Account not found"
 fi
 
+if gcloud projects get-iam-policy personal-portfolio-safehouse \
+    --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+    --format="value(bindings.role)" | grep -q "roles/containeranalysis.admin"; then
+    echo "roles/containeranalysis.admin assigned"
+else
+    echo "roles/containeranalysis.admin not assigned"
+fi
+
 echo ""
 echo "Checking Service Account permissions..."
 required_roles=(
@@ -71,6 +79,18 @@ for role in "${required_roles[@]}"; do
         echo "$role not assigned"
     fi
 done
+
+if gcloud secrets describe safehouse-latest-deployment --quiet 2>/dev/null; then
+    echo "Deployment tracking secret exists"
+else
+    echo "Deployment tracking secret not found"
+fi
+
+if gcloud secrets describe github-actions-demo-secret --quiet 2>/dev/null; then
+    echo "Demo secret exists"
+else
+    echo "Demo secret not found"
+fi
 
 echo ""
 echo "Checking Cloud Run Service Account..."

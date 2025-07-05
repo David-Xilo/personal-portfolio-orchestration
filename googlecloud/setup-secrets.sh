@@ -33,4 +33,20 @@ else
     echo "Terraform service account key secret already exists"
 fi
 
+echo "Creating deployment tracking secret..."
+if ! gcloud secrets describe safehouse-latest-deployment --quiet 2>/dev/null; then
+    echo '{"image":"none","timestamp":"initial"}' | gcloud secrets create safehouse-latest-deployment --data-file=-
+    echo "Deployment tracking secret created"
+else
+    echo "Deployment tracking secret already exists"
+fi
+
+echo "Creating GitHub Actions demo secret..."
+if ! gcloud secrets describe github-actions-demo-secret --quiet 2>/dev/null; then
+    echo "demo-value" | gcloud secrets create github-actions-demo-secret --data-file=-
+    echo "Demo secret created (you can delete this later)"
+else
+    echo "Demo secret already exists"
+fi
+
 echo "Secret setup complete!"

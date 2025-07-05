@@ -37,3 +37,9 @@ output "database_instance_name" {
   description = "The Cloud SQL instance name"
   value       = google_sql_database_instance.main.name
 }
+
+# Not necessary for now - don't add for cost reduction
+# output "terraform_state_bucket" {
+#   description = "Name of the Terraform state bucket"
+#   value       = google_storage_bucket.terraform_state.name
+# }

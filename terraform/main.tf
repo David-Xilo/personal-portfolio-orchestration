@@ -5,6 +5,11 @@ terraform {
       version = "~> 4.0"
     }
   }
+  
+  backend "gcs" {
+    bucket = "personal-portfolio-safehouse-terraform-state"
+    prefix = "terraform/state"
+  }
 }
 
 provider "google" {
@@ -158,7 +163,6 @@ resource "google_secret_manager_secret_version" "database_url" {
   secret_data = "postgresql://${google_sql_user.db_user.name}:${data.google_secret_manager_secret_version.db_password.secret_data}@${google_sql_database_instance.main.private_ip_address}:5432/${google_sql_database.safehouse_db.name}"
 }
 
-# Storage bucket for audit logs
 resource "google_storage_bucket" "audit_logs" {
   name          = "${var.project_id}-audit-logs"
   location      = var.region
@@ -184,7 +188,6 @@ resource "google_service_account" "cloud_run_sa" {
   description  = "Service account for Cloud Run with minimal permissions"
 }
 
-# Grant Cloud Run service account access to secrets
 resource "google_secret_manager_secret_iam_member" "cloud_run_db_secret_access" {
   secret_id = google_secret_manager_secret.database_url.secret_id
   role      = "roles/secretmanager.secretAccessor"
@@ -197,7 +200,6 @@ resource "google_secret_manager_secret_iam_member" "cloud_run_db_password_access
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
-# Update Cloud Run service to use dedicated service account
 resource "google_cloud_run_service" "safehouse_app" {
   name     = "safehouse-app"
   location = var.region
@@ -210,7 +212,6 @@ resource "google_cloud_run_service" "safehouse_app" {
     }
 
     spec {
-      # Use dedicated service account
       service_account_name = google_service_account.cloud_run_sa.email
 
       containers {
@@ -266,14 +267,12 @@ resource "google_cloud_run_service" "safehouse_app" {
   depends_on = [google_project_service.cloud_run_api]
 }
 
-# Optional: More restrictive Cloud Run access (for production)
-# Uncomment this and remove the "allUsers" version for production
 resource "google_cloud_run_service_iam_member" "authenticated_access" {
   location = google_cloud_run_service.safehouse_app.location
   project  = google_cloud_run_service.safehouse_app.project
   service  = google_cloud_run_service.safehouse_app.name
   role     = "roles/run.invoker"
-  member   = "user:david.dbmoura@gmail.com"  # Replace with your email
+  member   = "user:${var.authorized_user_email}"
 }
 
 
@@ -320,3 +319,37 @@ resource "google_logging_project_sink" "security_sink" {
     (resource.type="cloud_run_revision" AND httpRequest.status>=400)
   EOF
 }
+
+
+# Not necessary for now - don't add for cost reduction
+# resource "google_storage_bucket" "terraform_state" {
+#   name          = "${var.project_id}-terraform-state"
+#   location      = var.region
+#   force_destroy = true
+#
+#   versioning {
+#     enabled = false
+#   }
+#
+#   public_access_prevention = "enforced"
+#
+#   lifecycle_rule {
+#     action {
+#       type = "Delete"
+#     }
+#     condition {
+#       age = 15
+#       with_state = "ARCHIVED"
+#     }
+#   }
+#
+#   lifecycle_rule {
+#     action {
+#       type = "SetStorageClass"
+#       storage_class = "ARCHIVE"
+#     }
+#     condition {
+#       age = 7
+#     }
+#   }
+# }

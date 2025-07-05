@@ -124,7 +124,8 @@ start_postgres() {
 run_migrations() {
     print_section "Running Database Migrations"
 
-    local original_dir=$(pwd)
+    local original_dir
+    original_dir=$(pwd)
 
     print_status "Building migration container"
     docker build -f ${MIGRATION_DOCKERFILE} -t "${MIGRATION_IMAGE}" ${MIGRATION_CONTEXT}

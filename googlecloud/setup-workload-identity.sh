@@ -56,21 +56,23 @@ echo "🔑 Granting permissions to Service Account..."
 # Specific service permissions
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
-    --role="roles/cloudsql.admin"
+    --role="roles/cloudsql.editor"
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
-    --role="roles/run.admin"
+    --role="roles/run.developer"
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
-    --role="roles/secretmanager.admin"
+    --role="roles/secretmanager.secretAccessor"
 
-# Networking permissions
+# Networking permissions - TODO: Consider reducing these if VPC creation/API enabling works
+# roles/compute.networkAdmin may be reducible to roles/compute.networkUser + roles/servicenetworking.serviceAgent
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/compute.networkAdmin"
 
+# roles/servicenetworking.networkAdmin may be reducible to roles/servicenetworking.serviceAgent  
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/servicenetworking.networkAdmin"
@@ -78,17 +80,24 @@ gcloud projects add-iam-policy-binding ${PROJECT_ID} \
 # Storage for audit logs
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
-    --role="roles/storage.admin"
+    --role="roles/storage.objectAdmin"
 
 # Logging configuration
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/logging.configWriter"
 
-# Service usage (for API management)
+# Service usage (for API management) - TODO: Consider reducing to roles/serviceusage.serviceUsageConsumer if API enabling works
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
     --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
     --role="roles/serviceusage.serviceUsageAdmin"
+
+# Container Registry and analysis permissions for Go backend CI/CD
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --role="roles/containeranalysis.admin"
+
+echo "Container permissions granted"
 
 echo "Permissions granted"
 
