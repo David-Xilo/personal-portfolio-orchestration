@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+PROJECT_ID_NUMBER=942519139037
+GITHUB_POOL=safehouse-github-pool
+GITHUB_USER=David-Xilo
+
 bind_repository() {
     local repo_name="$1"
 
@@ -10,12 +14,12 @@ bind_repository() {
         exit 1
     fi
 
-    echo "🔗 Binding repository: David-Xilo/$repo_name"
+    echo "Binding repository: ${GITHUB_USER}/$repo_name"
 
     gcloud iam service-accounts add-iam-policy-binding \
         safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com \
         --role="roles/iam.workloadIdentityUser" \
-        --member="principalSet://iam.googleapis.com/projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/attribute.repository/David-Xilo/$repo_name"
+        --member="principalSet://iam.googleapis.com/projects/${PROJECT_ID_NUMBER}/locations/global/workloadIdentityPools/${GITHUB_POOL}/attribute.repository/${GITHUB_USER}/$repo_name"
 
     echo "Repository $repo_name bound successfully!"
 }
