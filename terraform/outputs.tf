@@ -13,11 +13,6 @@ output "database_connection_name" {
   value       = google_sql_database_instance.db_instance.connection_name
 }
 
-output "database_url_secret" {
-  description = "The Secret Manager secret containing the database URL"
-  value       = google_secret_manager_secret.database_url.secret_id
-}
-
 output "vpc_connector_name" {
   description = "The VPC Access Connector name"
   value       = google_vpc_access_connector.connector.name
@@ -38,8 +33,29 @@ output "database_instance_name" {
   value       = google_sql_database_instance.db_instance.name
 }
 
-# Not necessary for now - don't add for cost reduction
-# output "terraform_state_bucket" {
-#   description = "Name of the Terraform state bucket"
-#   value       = google_storage_bucket.terraform_state.name
-# }
+output "secret_names" {
+  description = "Names of created secrets"
+  value = {
+    db_password      = google_secret_manager_secret.db_password.secret_id
+    jwt_signing_key  = google_secret_manager_secret.jwt_signing_key.secret_id
+    frontend_auth    = google_secret_manager_secret.frontend_auth_key.secret_id
+  }
+}
+
+output "service_account_emails" {
+  description = "Service account email addresses"
+  value = {
+    cloud_run = google_service_account.cloud_run_sa.email
+    cicd      = google_service_account.terraform_cicd.email
+  }
+}
+
+output "workload_identity_provider" {
+  description = "Workload Identity Provider path for GitHub Actions"
+  value       = google_iam_workload_identity_pool_provider.github_provider.name
+}
+
+output "project_number" {
+  description = "Project number for Workload Identity configuration"
+  value       = data.google_project.project.number
+}

@@ -18,29 +18,6 @@ provider "google" {
 }
 
 
-
-# for app containers
-resource "google_project_service" "cloud_run_api" {
-  service = "run.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
-
-# for postgres
-resource "google_project_service" "cloud_sql_api" {
-  service = "sqladmin.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
-
-# for docker images
-resource "google_project_service" "container_registry_api" {
-  service = "containerregistry.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
-
-
 resource "google_sql_database_instance" "db_instance" {
   name             = "safehouse-db-instance"
   database_version = "POSTGRES_13"

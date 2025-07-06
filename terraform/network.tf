@@ -1,23 +1,4 @@
 
-# Enable required APIs
-resource "google_project_service" "compute_api" {
-  service = "compute.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
-
-resource "google_project_service" "servicenetworking_api" {
-  service = "servicenetworking.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
-
-# so cloud run can access private networks
-resource "google_project_service" "vpcaccess_api" {
-  service = "vpcaccess.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
 
 resource "google_compute_network" "vpc" {
   name                    = "safehouse-vpc"

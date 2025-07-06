@@ -25,6 +25,13 @@ on:
         default: 'no'
         type: string
 
+env:
+  # Set environment-specific variables
+  TF_VAR_FILE: 'terraform.tfvars'
+  PROJECT_ID: 'personal-portfolio-safehouse'
+  SERVICE_ACCOUNT_EMAIL: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
+
 jobs:
   validate:
     name: Terraform Validate
@@ -40,13 +47,13 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
-          service_account: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.7.0
 
       - name: Terraform Format Check
         run: |
@@ -79,13 +86,17 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
-          service_account: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.7.0
+
+      - name: Set Repository Variable
+        run: |
+          echo "TF_VAR_github_repository=${{ github.event.repository.name }}" >> $GITHUB_ENV
 
       - name: Terraform Init
         run: |
@@ -95,12 +106,16 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
+          echo "Using tfvars file: ${{ env.TF_VAR_FILE }}"
+          echo "Repository: ${{ github.event.repository.name }}"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo "Planning DESTROY operation..."
-            terraform plan -destroy -out=tfplan
+            terraform plan -destroy -var-file="${{ env.TF_VAR_FILE }}" -out=tfplan
           else
             echo "Planning infrastructure changes..."
-            terraform plan -out=tfplan
+            terraform plan -var-file="${{ env.TF_VAR_FILE }}" -out=tfplan
           fi
 
       - name: Show Plan Summary
@@ -109,6 +124,8 @@ jobs:
           echo "## Terraform Plan Summary"
           echo "**Action:** ${{ github.event.inputs.action }}"
           echo "**Environment:** ${{ github.event.inputs.environment }}"
+          echo "**Repository:** ${{ github.event.repository.name }}"
+          echo "**Project:** ${{ env.PROJECT_ID }}"
           echo "**Triggered by:** @${{ github.actor }}"
           echo ""
           terraform show -no-color tfplan
@@ -117,11 +134,10 @@ jobs:
         if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan-${{ github.run_number }}
+          name: terraform-plan-${{ github.run_number }}-${{ github.event.inputs.environment }}
           path: terraform/tfplan
           retention-days: 7
 
-  # Apply job - only runs for apply/destroy actions with confirmation
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
@@ -140,17 +156,21 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
-          service_account: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+          service_account: 'safehouse-terraform-cicd@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.7.0
+
+      - name: Set Repository Variable
+        run: |
+          echo "TF_VAR_github_repository=${{ github.event.repository.name }}" >> $GITHUB_ENV
 
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
-          name: terraform-plan-${{ github.run_number }}
+          name: terraform-plan-${{ github.run_number }}-${{ github.event.inputs.environment }}
           path: terraform/
 
       - name: Terraform Init
@@ -162,11 +182,11 @@ jobs:
         run: |
           cd terraform
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "DESTROYING infrastructure..."
-            echo "This will DELETE all resources!"
+            echo "🗑️ DESTROYING infrastructure..."
+            echo "This will DELETE all resources in ${{ github.event.inputs.environment }}!"
             terraform apply tfplan
           else
-            echo "Applying infrastructure changes..."
+            echo "🚀 Applying infrastructure changes to ${{ github.event.inputs.environment }}..."
             terraform apply tfplan
           fi
 
@@ -178,41 +198,62 @@ jobs:
           echo "## 📊 Terraform Outputs"
           terraform output
 
+      - name: Store Deployment Info
+        if: github.event.inputs.action == 'apply' && success()
+        run: |
+          cd terraform
+          # Create deployment metadata
+          cat > deployment-info.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "environment": "${{ github.event.inputs.environment }}",
+            "repository": "${{ github.event.repository.name }}",
+            "commit": "${{ github.sha }}",
+            "actor": "${{ github.actor }}",
+            "workflow_run": "${{ github.run_number }}",
+            "project_id": "${{ env.PROJECT_ID }}"
+          }
+          EOF
+          
+          echo "📝 Deployment completed successfully!"
+          cat deployment-info.json
+
       - name: Notify Success
         if: success()
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo "🗑️ Infrastructure destruction completed successfully!"
-            echo "All resources have been removed."
+            echo "All resources in ${{ github.event.inputs.environment }} have been removed."
           else
-            echo "✅ Infrastructure deployment completed successfully!"
+            echo "✅ Infrastructure deployment to ${{ github.event.inputs.environment }} completed successfully!"
             echo "🔗 Check outputs above for service URLs and details."
           fi
 
       - name: Notify Failure
         if: failure()
         run: |
-          echo "❌ Infrastructure ${{ github.event.inputs.action }} failed!"
+          echo "❌ Infrastructure ${{ github.event.inputs.action }} failed for ${{ github.event.inputs.environment }}!"
           echo "Check the logs above for details."
           exit 1
 
-  # Safety check job - warns about destructive actions
   safety_check:
     name: Safety Check
     runs-on: ubuntu-latest
-    if: github.event.inputs.action == 'apply' && github.event.inputs.confirm_apply != 'yes'
+    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply != 'yes'
 
     steps:
       - name: Safety Warning
         run: |
           echo "SAFETY CHECK FAILED"
           echo ""
-          echo "You selected 'apply' but didn't confirm with 'yes'"
+          echo "You selected '${{ github.event.inputs.action }}' but didn't confirm with 'yes'"
           echo ""
-          echo "To deploy infrastructure:"
-          echo "1. Set 'Action' to 'apply'"
+          echo "To ${{ github.event.inputs.action }} infrastructure:"
+          echo "1. Set 'Action' to '${{ github.event.inputs.action }}'"
           echo "2. Set 'Type yes to confirm' to 'yes'"
           echo "3. Run the workflow again"
           echo ""
           echo "This prevents accidental deployments!"
+          echo ""
+          echo "Target: ${{ github.event.inputs.environment }} environment"
           exit 1
