@@ -6,6 +6,7 @@ SERVICE_ACCOUNT_FULL="safehouse-terraform-cicd@personal-portfolio-safehouse.iam.
 PROJECT_ID="personal-portfolio-safehouse"
 
 echo "Setting up Workload Identity..."
+gcloud config set project "${PROJECT_ID}"
 
 echo "Enabling required APIs..."
 gcloud services enable compute.googleapis.com
