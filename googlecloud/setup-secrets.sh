@@ -3,6 +3,11 @@ set -e
 
 PROJECT_ID="personal-portfolio-safehouse"
 
+# secrets to create
+DB_PASSWORD_SECRET_NAME="safehouse-db-password"
+JWT_SECRET_NAME="safehouse-jwt-signing-key"
+FRONTEND_AUTH_SECRET_NAME="safehouse-frontend-auth-key"
+
 echo "Setting up secrets for project: $PROJECT_ID"
 
 if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q .; then
@@ -17,36 +22,31 @@ gcloud config set project $PROJECT_ID
 echo "Enabling Secret Manager API"
 gcloud services enable secretmanager.googleapis.com
 
-echo "Creating database password secret..."
-if ! gcloud secrets describe portfolio-safehouse-db-password --quiet 2>/dev/null; then
+echo "Creating database password secret"
+if ! gcloud secrets describe "${DB_PASSWORD_SECRET_NAME}" --quiet 2>/dev/null; then
     DB_PASSWORD=$(openssl rand -base64 32)
-    echo -n "$DB_PASSWORD" | gcloud secrets create portfolio-safehouse-db-password --data-file=-
+    echo -n "${DB_PASSWORD}" | gcloud secrets create "${DB_PASSWORD_SECRET_NAME}" --data-file=-
     echo "Database password secret created with generated password"
 else
     echo "Database password secret already exists"
 fi
 
-echo "Creating terraform service account key secret"
-if ! gcloud secrets describe personal-portfolio-terraform-key --quiet 2>/dev/null; then
-    echo "Terraform service account key secret not found."
+echo "Creating JWT secret"
+if ! gcloud secrets describe "${JWT_SECRET_NAME}" --quiet 2>/dev/null; then
+    JWT_SECRET=$(openssl rand -base64 32)
+    echo -n "${JWT_SECRET}" | gcloud secrets create "${JWT_SECRET_NAME}" --data-file=-
+    echo "JWT secret created with generated password"
 else
-    echo "Terraform service account key secret already exists"
+    echo "JWT secret already exists"
 fi
 
-echo "Creating deployment tracking secret..."
-if ! gcloud secrets describe safehouse-latest-deployment --quiet 2>/dev/null; then
-    echo '{"image":"none","timestamp":"initial"}' | gcloud secrets create safehouse-latest-deployment --data-file=-
-    echo "Deployment tracking secret created"
+echo "Creating frontend auth secret"
+if ! gcloud secrets describe "${FRONTEND_AUTH_SECRET_NAME}" --quiet 2>/dev/null; then
+    FE_AUTH_SECRET=$(openssl rand -base64 32)
+    echo -n "${FE_AUTH_SECRET}" | gcloud secrets create "${FRONTEND_AUTH_SECRET_NAME}" --data-file=-
+    echo "Frontend auth secret created with generated password"
 else
-    echo "Deployment tracking secret already exists"
-fi
-
-echo "Creating GitHub Actions demo secret..."
-if ! gcloud secrets describe github-actions-demo-secret --quiet 2>/dev/null; then
-    echo "demo-value" | gcloud secrets create github-actions-demo-secret --data-file=-
-    echo "Demo secret created (you can delete this later)"
-else
-    echo "Demo secret already exists"
+    echo "Frontend auth secret already exists"
 fi
 
 echo "Secret setup complete!"

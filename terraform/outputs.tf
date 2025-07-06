@@ -1,16 +1,16 @@
 output "cloud_run_url" {
   description = "The URL of the Cloud Run service"
-  value       = google_cloud_run_service.safehouse_app.status[0].url
+  value       = google_cloud_run_service.safehouse_backend.status[0].url
 }
 
 output "database_private_ip" {
   description = "The private IP address of the Cloud SQL instance"
-  value       = google_sql_database_instance.main.private_ip_address
+  value       = google_sql_database_instance.db_instance.private_ip_address
 }
 
 output "database_connection_name" {
   description = "The connection name for the Cloud SQL instance"
-  value       = google_sql_database_instance.main.connection_name
+  value       = google_sql_database_instance.db_instance.connection_name
 }
 
 output "database_url_secret" {
@@ -35,7 +35,7 @@ output "vpc_network_name" {
 
 output "database_instance_name" {
   description = "The Cloud SQL instance name"
-  value       = google_sql_database_instance.main.name
+  value       = google_sql_database_instance.db_instance.name
 }
 
 # Not necessary for now - don't add for cost reduction

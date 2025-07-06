@@ -1,10 +1,22 @@
 #!/bin/bash
 set -e
 
-PROJECT_ID=personal-portfolio-safehouse
+PROJECT_ID="personal-portfolio-safehouse"
+
+SERVICE_ACCOUNT_CICD="safehouse-terraform-cicd"
+SERVICE_ACCOUNT_CICD_FULL="${SERVICE_ACCOUNT_CICD}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+SERVICE_ACCOUNT_CLOUD_RUN="safehouse-cloud-run"
+SERVICE_ACCOUNT_CLOUD_RUN_FULL="${SERVICE_ACCOUNT_CLOUD_RUN}@${PROJECT_ID}.iam.gserviceaccount.com"
+
+# secrets to verify
+DB_PASSWORD_SECRET_NAME="safehouse-db-password"
+JWT_SECRET_NAME="safehouse-jwt-signing-key"
+FRONTEND_AUTH_SECRET_NAME="safehouse-frontend-auth-key"
+
 gcloud config set project "$PROJECT_ID"
 
-echo "Checking required APIs..."
+echo "Checking required APIs"
 required_apis=(
     "compute.googleapis.com"
     "servicenetworking.googleapis.com" 
@@ -21,7 +33,7 @@ workload_identity_apis=(
     "cloudresourcemanager.googleapis.com"
 )
 
-echo "=== Core APIs (enabled by Terraform) ==="
+echo "Core APIs (enabled by Terraform)"
 for api in "${required_apis[@]}"; do
     if gcloud services list --enabled --filter="name:$api" --format="value(name)" | grep -q "$api"; then
         echo "$api enabled"
@@ -31,7 +43,7 @@ for api in "${required_apis[@]}"; do
 done
 
 echo ""
-echo "=== Workload Identity APIs ==="
+echo "Workload Identity APIs"
 for api in "${workload_identity_apis[@]}"; do
     if gcloud services list --enabled --filter="name:$api" --format="value(name)" | grep -q "$api"; then
         echo "$api enabled"
@@ -41,7 +53,7 @@ for api in "${workload_identity_apis[@]}"; do
 done
 
 echo ""
-echo "Checking Workload Identity Pool..."
+echo "Checking Workload Identity Pool"
 if gcloud iam workload-identity-pools describe safehouse-github-pool --location="global" --quiet 2>/dev/null; then
     echo "Workload Identity Pool exists"
 else
@@ -49,7 +61,7 @@ else
 fi
 
 echo ""
-echo "Checking Workload Identity Provider..."
+echo "Checking Workload Identity Provider"
 if gcloud iam workload-identity-pools providers describe safehouse-github-provider \
     --location="global" \
     --workload-identity-pool=safehouse-github-pool --quiet 2>/dev/null; then
@@ -59,20 +71,20 @@ else
 fi
 
 echo ""
-echo "Checking Service Account..."
-if gcloud iam service-accounts describe safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com --quiet 2>/dev/null; then
-    echo "Service Account exists"
+echo "Checking Service Accounts"
+if gcloud iam service-accounts describe "${SERVICE_ACCOUNT_CICD_FULL}" --quiet 2>/dev/null; then
+    echo "CI/CD Service Account exists"
 else
-    echo "Service Account not found"
+    echo "CI/CD Service Account not found"
 fi
 
-if gcloud projects get-iam-policy "${PROJECT_ID}" \
-    --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com" \
-    --format="value(bindings.role)" | grep -q "roles/containeranalysis.admin"; then
-    echo "roles/containeranalysis.admin assigned"
+
+if gcloud iam service-accounts describe "${SERVICE_ACCOUNT_CLOUD_RUN_FULL}" --quiet 2>/dev/null; then
+    echo "Cloud Run Service Account exists"
 else
-    echo "roles/containeranalysis.admin not assigned"
+    echo "Cloud Run Service Account not found"
 fi
+
 
 echo ""
 echo "=== Service Account Permissions ==="
@@ -81,7 +93,7 @@ required_roles=(
     "roles/run.developer"
     "roles/secretmanager.secretAccessor"
     "roles/compute.networkAdmin"
-    "roles/servicenetworking.networkAdmin"
+    "roles/servicenetworking.networksAdmin"
     "roles/storage.objectAdmin"
     "roles/logging.configWriter"
     "roles/serviceusage.serviceUsageAdmin"
@@ -90,7 +102,7 @@ required_roles=(
 
 for role in "${required_roles[@]}"; do
     if gcloud projects get-iam-policy ${PROJECT_ID} \
-        --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com" \
+        --filter="bindings.members:serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
         --format="value(bindings.role)" | grep -q "$role"; then
         echo "$role assigned"
     else
@@ -98,50 +110,32 @@ for role in "${required_roles[@]}"; do
     fi
 done
 
-if gcloud secrets describe safehouse-latest-deployment --quiet 2>/dev/null; then
-    echo "Deployment tracking secret exists"
-else
-    echo "Deployment tracking secret not found"
-fi
-
-if gcloud secrets describe github-actions-demo-secret --quiet 2>/dev/null; then
-    echo "Demo secret exists"
-else
-    echo "Demo secret not found"
-fi
 
 echo ""
-echo "Checking Cloud Run Service Account..."
-if gcloud iam service-accounts describe portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com --quiet 2>/dev/null; then
-    echo "Cloud Run Service Account exists"
-else
-    echo "Cloud Run Service Account not found"
-fi
+echo "Checking secrets"
 
-echo ""
-echo "Checking secrets..."
-if gcloud secrets describe portfolio-safehouse-db-password --quiet 2>/dev/null; then
+if gcloud secrets describe "${DB_PASSWORD_SECRET_NAME}" --quiet 2>/dev/null; then
     echo "Database password secret exists"
 else
     echo "Database password secret not found"
 fi
 
-if gcloud secrets describe safehouse-database-url --quiet 2>/dev/null; then
-    echo "Database URL secret exists"
+if gcloud secrets describe "${JWT_SECRET_NAME}" --quiet 2>/dev/null; then
+    echo "JWT secret exists"
 else
-    echo "Database URL secret not found"
+    echo "JWT secret not found"
 fi
 
-if gcloud secrets describe personal-portfolio-terraform-key --quiet 2>/dev/null; then
-    echo "Terraform key secret exists"
+if gcloud secrets describe "${FRONTEND_AUTH_SECRET_NAME}" --quiet 2>/dev/null; then
+    echo "Frontend auth key secret exists"
 else
-    echo "Terraform key secret not found (optional for Workload Identity)"
+    echo "Frontend auth key secret not found (optional for Workload Identity)"
 fi
 
 echo ""
-echo "Checking Secret Manager IAM permissions..."
-# Check if Cloud Run service account has access to secrets
-if gcloud secrets get-iam-policy portfolio-safehouse-db-password \
+echo "Checking Secret Manager IAM permissions"
+
+if gcloud secrets get-iam-policy "${DB_PASSWORD_SECRET_NAME}" \
     --filter="bindings.members:serviceAccount:portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com" \
     --format="value(bindings.role)" | grep -q "roles/secretmanager.secretAccessor"; then
     echo "Cloud Run has access to database password secret"
@@ -149,12 +143,20 @@ else
     echo "Cloud Run missing access to database password secret"
 fi
 
-if gcloud secrets get-iam-policy safehouse-database-url \
+if gcloud secrets get-iam-policy "${JWT_SECRET_NAME}" \
     --filter="bindings.members:serviceAccount:portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com" \
     --format="value(bindings.role)" | grep -q "roles/secretmanager.secretAccessor"; then
-    echo "Cloud Run has access to database URL secret"
+    echo "Cloud Run has access to JWT secret"
 else
-    echo "Cloud Run missing access to database URL secret"
+    echo "Cloud Run missing access to JWT secret"
+fi
+
+if gcloud secrets get-iam-policy "${FRONTEND_AUTH_SECRET_NAME}" \
+    --filter="bindings.members:serviceAccount:portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --format="value(bindings.role)" | grep -q "roles/secretmanager.secretAccessor"; then
+    echo "Cloud Run has access to Frontend auth secret"
+else
+    echo "Cloud Run missing access to Frontend auth secret"
 fi
 
 echo ""
@@ -167,8 +169,5 @@ echo "safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com"
 echo ""
 echo "Cloud Run Service Account:"
 echo "portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com"
-echo ""
-echo "To bind a repository:"
-echo "./bind-repository.sh <repository-name>"
 echo ""
 echo "Verification complete!"

@@ -3,6 +3,8 @@
 
 set -e
 
+PROJECT_ID="personal-portfolio-safehouse"
+
 NETWORK_NAME="safehouse_dev_network"
 
 FRONTEND_URL=http://localhost:3000
@@ -86,6 +88,10 @@ wait_for_postgres() {
     return 1
 }
 
+gcp_application_default_login() {
+  gcloud auth application-default login
+}
+
 create_network() {
     if docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}$"; then
         print_status "Network ${NETWORK_NAME} already exists"
@@ -158,16 +164,27 @@ start_backend() {
 
     print_status "Build backend container..."
     docker build -t ${BACKEND_IMAGE} ${BACKEND_DOCKERFILE}
+#    docker build -t safehouse_backend_image ../../safehouse-main-back
 
     print_status "Starting backend container..."
     docker run \
       -e ENV=development \
       -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
       -e FRONTEND_URL=${FRONTEND_URL} \
+      -e GCP_PROJECT_ID=${PROJECT_ID} \
       --network ${NETWORK_NAME} \
       --name ${BACKEND_CONTAINER} \
       -p ${BACKEND_PORT}:${BACKEND_PORT} \
       -d ${BACKEND_IMAGE}
+
+#    docker run \
+#          -e ENV=development \
+#          -e DATABASE_URL=postgres://dev_user:mypassword@postgres-dev:5432/dev_db?sslmode=disable \
+#          -e FRONTEND_URL=http://localhost:3000 \
+#          --network safehouse_dev_network \
+#          --name safehouse_backend \
+#          -p 4000:4000 \
+#          -d safehouse_backend_image
 
     print_warning "Backend startup command needs to be configured based on your specific setup"
 }
@@ -250,6 +267,7 @@ case "${1:-start}" in
         print_status "Cleanup first"
         cleanup
         print_status "Starting now"
+        gcp_application_default_login
         create_network
         start_postgres
         run_migrations

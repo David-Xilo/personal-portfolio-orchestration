@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-SERVICE_ACCOUNT="safehouse-terraform-cicd"
-SERVICE_ACCOUNT_FULL="safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com"
+SERVICE_ACCOUNT_CICD="safehouse-terraform-cicd"
+SERVICE_ACCOUNT_CICD_FULL="${SERVICE_ACCOUNT_CICD}@personal-portfolio-safehouse.iam.gserviceaccount.com"
 PROJECT_ID="personal-portfolio-safehouse"
 
 echo "Setting up Workload Identity..."
@@ -44,8 +44,8 @@ else
 fi
 
 echo "Creating Service Account..."
-if ! gcloud iam service-accounts describe ${SERVICE_ACCOUNT_FULL} --quiet 2>/dev/null; then
-    gcloud iam service-accounts create ${SERVICE_ACCOUNT} \
+if ! gcloud iam service-accounts describe ${SERVICE_ACCOUNT_CICD_FULL} --quiet 2>/dev/null; then
+    gcloud iam service-accounts create ${SERVICE_ACCOUNT_CICD} \
         --display-name="Terraform CI/CD Service Account"
     echo "Service Account created"
 else
@@ -56,46 +56,46 @@ echo "🔑 Granting permissions to Service Account..."
 
 # Specific service permissions
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/cloudsql.editor"
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/run.developer"
 
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/secretmanager.secretAccessor"
 
 # Networking permissions - TODO: Consider reducing these if VPC creation/API enabling works
 # roles/compute.networkAdmin may be reducible to roles/compute.networkUser + roles/servicenetworking.serviceAgent
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/compute.networkAdmin"
 
 # roles/servicenetworking.networkAdmin may be reducible to roles/servicenetworking.serviceAgent  
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
-    --role="roles/servicenetworking.networkAdmin"
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
+    --role="roles/servicenetworking.networksAdmin"
 
 # Storage for audit logs
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/storage.objectAdmin"
 
 # Logging configuration
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/logging.configWriter"
 
 # Service usage (for API management) - TODO: Consider reducing to roles/serviceusage.serviceUsageConsumer if API enabling works
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/serviceusage.serviceUsageAdmin"
 
 # Container Registry and analysis permissions for Go backend CI/CD
 gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    --member="serviceAccount:${SERVICE_ACCOUNT_FULL}" \
+    --member="serviceAccount:${SERVICE_ACCOUNT_CICD_FULL}" \
     --role="roles/containeranalysis.admin"
 
 echo "Container permissions granted"
