@@ -2,6 +2,7 @@
 set -e
 
 PROJECT_ID=personal-portfolio-safehouse
+gcloud config set project "$PROJECT_ID"
 
 echo "Checking required APIs..."
 required_apis=(

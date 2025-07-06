@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-PROJECT_ID_NUMBER=942519139037
+PROJECT_ID=personal-portfolio-safehouse
+PROJECT_ID_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 GITHUB_POOL=safehouse-github-pool
 GITHUB_USER=David-Xilo
 
