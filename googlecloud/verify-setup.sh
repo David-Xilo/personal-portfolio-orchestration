@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+PROJECT_ID=personal-portfolio-safehouse
+
 echo "Checking required APIs..."
 required_apis=(
     "compute.googleapis.com"
@@ -57,14 +59,14 @@ fi
 
 echo ""
 echo "Checking Service Account..."
-if gcloud iam service-accounts describe safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com --quiet 2>/dev/null; then
+if gcloud iam service-accounts describe safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com --quiet 2>/dev/null; then
     echo "Service Account exists"
 else
     echo "Service Account not found"
 fi
 
-if gcloud projects get-iam-policy personal-portfolio-safehouse \
-    --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+if gcloud projects get-iam-policy "${PROJECT_ID}" \
+    --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com" \
     --format="value(bindings.role)" | grep -q "roles/containeranalysis.admin"; then
     echo "roles/containeranalysis.admin assigned"
 else
@@ -86,8 +88,8 @@ required_roles=(
 )
 
 for role in "${required_roles[@]}"; do
-    if gcloud projects get-iam-policy personal-portfolio-safehouse \
-        --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+    if gcloud projects get-iam-policy ${PROJECT_ID} \
+        --filter="bindings.members:serviceAccount:safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com" \
         --format="value(bindings.role)" | grep -q "$role"; then
         echo "$role assigned"
     else
@@ -109,7 +111,7 @@ fi
 
 echo ""
 echo "Checking Cloud Run Service Account..."
-if gcloud iam service-accounts describe portfolio-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com --quiet 2>/dev/null; then
+if gcloud iam service-accounts describe portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com --quiet 2>/dev/null; then
     echo "Cloud Run Service Account exists"
 else
     echo "Cloud Run Service Account not found"
@@ -139,7 +141,7 @@ echo ""
 echo "Checking Secret Manager IAM permissions..."
 # Check if Cloud Run service account has access to secrets
 if gcloud secrets get-iam-policy portfolio-safehouse-db-password \
-    --filter="bindings.members:serviceAccount:portfolio-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+    --filter="bindings.members:serviceAccount:portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com" \
     --format="value(bindings.role)" | grep -q "roles/secretmanager.secretAccessor"; then
     echo "Cloud Run has access to database password secret"
 else
@@ -147,7 +149,7 @@ else
 fi
 
 if gcloud secrets get-iam-policy safehouse-database-url \
-    --filter="bindings.members:serviceAccount:portfolio-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+    --filter="bindings.members:serviceAccount:portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com" \
     --format="value(bindings.role)" | grep -q "roles/secretmanager.secretAccessor"; then
     echo "Cloud Run has access to database URL secret"
 else
@@ -160,10 +162,10 @@ echo "Workload Identity Provider Path:"
 echo "projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider"
 echo ""
 echo "Terraform Service Account:"
-echo "safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com"
+echo "safehouse-terraform-cicd@${PROJECT_ID}.iam.gserviceaccount.com"
 echo ""
 echo "Cloud Run Service Account:"
-echo "portfolio-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com"
+echo "portfolio-cloud-run@${PROJECT_ID}.iam.gserviceaccount.com"
 echo ""
 echo "To bind a repository:"
 echo "./bind-repository.sh <repository-name>"
