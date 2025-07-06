@@ -59,3 +59,23 @@ output "project_number" {
   description = "Project number for Workload Identity configuration"
   value       = data.google_project.project.number
 }
+
+output "repository_configuration" {
+  description = "GitHub repository configuration"
+  value = {
+    backend       = var.backend_github_repository
+    frontend      = var.frontend_github_repository
+    migrations    = var.migrations_github_repository
+    orchestration = var.orchestration_github_repository
+    github_user   = var.github_user
+  }
+}
+
+output "environment_info" {
+  description = "Environment and project information"
+  value = {
+    project_id = var.project_id
+    region     = var.region
+    environment = "production"
+  }
+}
