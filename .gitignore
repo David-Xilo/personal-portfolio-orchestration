@@ -85,3 +85,6 @@ secrets/
 *.crt
 *.p12
 *.pfx
+
+# used only for local dev
+dev-secrets/

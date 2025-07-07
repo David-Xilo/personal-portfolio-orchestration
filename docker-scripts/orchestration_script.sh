@@ -38,11 +38,17 @@ POSTGRES_VOLUME=safehouse_postgres_volume
 
 NETWORK_ALIAS=${POSTGRES_HOST}
 
+DEV_JWT_SECRET="dev-jwt-secret-key-for-local-development-only-please-change-in-production"
+DEV_FRONTEND_AUTH_KEY="dev-frontend-auth-key-for-local-development-only"
+DEV_DB_PASSWORD="${POSTGRES_PASSWORD}"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+
+# TODO create local secret store https://claude.ai/chat/7036fe28-a16f-4af0-b6c7-6063dafefc13
 
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -154,6 +160,28 @@ run_migrations() {
     print_status "Migrations completed successfully"
 }
 
+create_local_secrets() {
+    print_section "Setting Up Local Development Secrets"
+
+    local secrets_dir="./dev-secrets"
+    mkdir -p "${secrets_dir}"
+
+    # Create local secret files (matching the secret names from your backend)
+    echo "${DEV_JWT_SECRET}" > "${secrets_dir}/${JwtSecretName:-safehouse-jwt-signing-key}"
+    echo "${DEV_FRONTEND_AUTH_KEY}" > "${secrets_dir}/${FrontendAuthSecretName:-safehouse-frontend-auth-key}"
+    echo "${DEV_DB_PASSWORD}" > "${secrets_dir}/safehouse-db-password"
+
+    # Set appropriate permissions
+    chmod 600 "${secrets_dir}"/*
+
+    print_status "Local development secrets created in ${secrets_dir}/"
+    print_warning "These are for development only - not production secrets!"
+
+    # Show what secrets were created
+    echo "Created secrets:"
+    ls -la "${secrets_dir}/"
+}
+
 start_backend() {
     print_section "Starting Backend Services"
 
@@ -162,31 +190,42 @@ start_backend() {
         return 0
     fi
 
-    print_status "Build backend container..."
+    # Create local secrets first
+    create_local_secrets
+
+    print_status "Building backend container..."
     docker build -t ${BACKEND_IMAGE} ${BACKEND_DOCKERFILE}
-#    docker build -t safehouse_backend_image ../../safehouse-main-back
 
-    print_status "Starting backend container..."
+    print_status "Starting backend container with local development secrets..."
+
+    # Get absolute path for volume mounting
+    local secrets_path="$(pwd)/dev-secrets"
+
     docker run \
-      -e ENV=development \
-      -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
-      -e FRONTEND_URL=${FRONTEND_URL} \
-      -e GCP_PROJECT_ID=${PROJECT_ID} \
-      --network ${NETWORK_NAME} \
-      --name ${BACKEND_CONTAINER} \
-      -p ${BACKEND_PORT}:${BACKEND_PORT} \
-      -d ${BACKEND_IMAGE}
+        -e ENV=development \
+        -e SECRET_STORE_MODE=local \
+        -e SECRETS_PATH=/app/secrets \
+        -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
+        -e FRONTEND_URL=${FRONTEND_URL} \
+        -e GCP_PROJECT_ID=${PROJECT_ID} \
+        --network ${NETWORK_NAME} \
+        --name ${BACKEND_CONTAINER} \
+        -p ${BACKEND_PORT}:${BACKEND_PORT} \
+        -v "${secrets_path}:/app/secrets:ro" \
+        -d ${BACKEND_IMAGE}
 
-#    docker run \
-#          -e ENV=development \
-#          -e DATABASE_URL=postgres://dev_user:mypassword@postgres-dev:5432/dev_db?sslmode=disable \
-#          -e FRONTEND_URL=http://localhost:3000 \
-#          --network safehouse_dev_network \
-#          --name safehouse_backend \
-#          -p 4000:4000 \
-#          -d safehouse_backend_image
+    # Wait a moment for container to start
+    sleep 2
 
-    print_warning "Backend startup command needs to be configured based on your specific setup"
+    # Check if backend started successfully
+    if container_running $BACKEND_CONTAINER; then
+        print_status "Backend container started successfully"
+        print_status "Backend will load secrets from /app/secrets/ (mounted from ${secrets_path})"
+    else
+        print_error "Backend container failed to start"
+        docker logs ${BACKEND_CONTAINER}
+        return 1
+    fi
 }
 
 start_frontend() {
@@ -235,7 +274,13 @@ cleanup() {
 
     docker volume rm ${POSTGRES_VOLUME} || true
 
-    print_status "Cleanup completed"
+    # Clean up local secrets
+    if [ -d "./dev-secrets" ]; then
+        print_status "Removing local development secrets"
+        rm -rf ./dev-secrets
+    fi
+
+    print_status "Cleanup completed (including local secrets)"
 }
 
 migration_command() {
@@ -267,7 +312,7 @@ case "${1:-start}" in
         print_status "Cleanup first"
         cleanup
         print_status "Starting now"
-        gcp_application_default_login
+#        gcp_application_default_login
         create_network
         start_postgres
         run_migrations
