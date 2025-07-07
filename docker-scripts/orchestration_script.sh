@@ -198,12 +198,11 @@ start_backend() {
 
     print_status "Starting backend container with local development secrets..."
 
-    # Get absolute path for volume mounting
-    local secrets_path="$(pwd)/dev-secrets"
+    local secrets_path
+    secrets_path="$(pwd)/dev-secrets"
 
     docker run \
         -e ENV=development \
-        -e SECRET_STORE_MODE=local \
         -e SECRETS_PATH=/app/secrets \
         -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
         -e FRONTEND_URL=${FRONTEND_URL} \
