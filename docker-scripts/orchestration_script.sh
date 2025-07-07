@@ -239,8 +239,10 @@ start_frontend() {
     docker build -t ${FRONTEND_IMAGE} ${FRONTEND_DOCKERFILE}
 
     print_status "Starting frontend container..."
+    # frontend starts in prod mode, there is no call to gcloud store, so its ok
     docker run \
       --name ${FRONTEND_CONTAINER} \
+      -e ENV=production \
       -p ${FRONTEND_PORT}:${FRONTEND_PORT} \
       -d ${FRONTEND_IMAGE}
 
