@@ -168,7 +168,6 @@ create_local_secrets() {
 
     # Create local secret files (matching the secret names from your backend)
     echo "${DEV_JWT_SECRET}" > "${secrets_dir}/${JwtSecretName:-safehouse-jwt-signing-key}"
-    echo "${DEV_FRONTEND_AUTH_KEY}" > "${secrets_dir}/${FrontendAuthSecretName:-safehouse-frontend-auth-key}"
     echo "${DEV_DB_PASSWORD}" > "${secrets_dir}/safehouse-db-password"
 
     # Set appropriate permissions
@@ -242,7 +241,6 @@ start_frontend() {
     # frontend starts in prod mode, there is no call to gcloud store, so its ok
     docker run \
       --name ${FRONTEND_CONTAINER} \
-      -e ENV=production \
       -p ${FRONTEND_PORT}:${FRONTEND_PORT} \
       -d ${FRONTEND_IMAGE}
 
