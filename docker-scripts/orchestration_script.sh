@@ -48,7 +48,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# TODO create local secret store https://claude.ai/chat/7036fe28-a16f-4af0-b6c7-6063dafefc13
 
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -94,9 +93,6 @@ wait_for_postgres() {
     return 1
 }
 
-gcp_application_default_login() {
-  gcloud auth application-default login
-}
 
 create_network() {
     if docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}$"; then
@@ -311,7 +307,6 @@ case "${1:-start}" in
         print_status "Cleanup first"
         cleanup
         print_status "Starting now"
-#        gcp_application_default_login
         create_network
         start_postgres
         run_migrations
