@@ -39,7 +39,6 @@ POSTGRES_VOLUME=safehouse_postgres_volume
 NETWORK_ALIAS=${POSTGRES_HOST}
 
 DEV_JWT_SECRET="dev-jwt-secret-key-for-local-development-only-please-change-in-production"
-DEV_FRONTEND_AUTH_KEY="dev-frontend-auth-key-for-local-development-only"
 DEV_DB_PASSWORD="${POSTGRES_PASSWORD}"
 
 RED='\033[0;31m'
@@ -199,7 +198,10 @@ start_backend() {
     docker run \
         -e ENV=development \
         -e SECRETS_PATH=/app/secrets \
-        -e DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable \
+        -e DB_HOST="${POSTGRES_HOST}" \
+        -e DB_USER="${POSTGRES_USER}" \
+        -e DB_PORT="${POSTGRES_PORT}" \
+        -e DB_NAME="${POSTGRES_DB}" \
         -e FRONTEND_URL=${FRONTEND_URL} \
         -e GCP_PROJECT_ID=${PROJECT_ID} \
         --network ${NETWORK_NAME} \
