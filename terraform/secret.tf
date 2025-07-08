@@ -44,12 +44,14 @@ resource "google_secret_manager_secret_version" "jwt_signing_key" {
 
 # Grant Cloud Run SA access to secrets
 resource "google_secret_manager_secret_iam_member" "cloud_run_db_password_access" {
+  project   = var.project_id
   secret_id = google_secret_manager_secret.db_password.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "cloud_run_jwt_access" {
+  project   = var.project_id
   secret_id = google_secret_manager_secret.jwt_signing_key.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"

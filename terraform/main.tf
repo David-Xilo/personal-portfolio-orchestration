@@ -124,9 +124,25 @@ resource "google_cloud_run_service" "safehouse_backend" {
       containers {
         image = "gcr.io/cloudrun/hello"
 
+        // TODO check if it is better to pass the host, db name etc and let backend get the secret itself
         env {
-          name  = "DATABASE_URL"
-          value = "postgres://${google_sql_user.db_user.name}:${data.google_secret_manager_secret_version.db_password.secret_data}@${google_sql_database_instance.db_instance.private_ip_address}:5432/${google_sql_database.safehouse_db.name}?sslmode=required"
+          name  = "DB_HOST"
+          value = google_sql_database_instance.db_instance.private_ip_address
+        }
+
+        env {
+          name  = "DB_PORT"
+          value = "5432"
+        }
+
+        env {
+          name  = "DB_NAME"
+          value = google_sql_database.safehouse_db.name
+        }
+
+        env {
+          name  = "DB_USER"
+          value = google_sql_user.db_user.name
         }
 
         env {
