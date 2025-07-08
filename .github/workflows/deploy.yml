@@ -1,0 +1,321 @@
+name: Infrastructure Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      confirm_apply:
+        description: 'Type "yes" to confirm apply/destroy'
+        required: false
+        default: 'no'
+        type: string
+
+env:
+  PROJECT_ID: "personal-portfolio-safehouse"
+  SERVICE_ACCOUNT_EMAIL: 'safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/942519139037/locations/global/workloadIdentityPools/safehouse-github-pool/providers/safehouse-github-provider'
+
+jobs:
+  validate:
+    name: Terraform Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Terraform Format Check
+        run: |
+          cd terraform
+          terraform fmt -check
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd terraform
+          terraform validate
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event.inputs.action == 'plan' || github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Show Configuration
+        run: |
+          echo "## 🏗️ Safehouse Infrastructure Deployment"
+          echo "**Environment:** Production"
+          echo "**Project:** ${{ env.PROJECT_ID }}"
+          echo "**Orchestration Repository:** ${{ github.event.repository.name }}"
+          echo "**Action:** ${{ github.event.inputs.action }}"
+          echo "**Actor:** @${{ github.actor }}"
+          echo ""
+          echo "**Target Services:**"
+          echo "- Backend: safehouse-main-back"
+          echo "- Frontend: safehouse-main-front"
+          echo "- Database Migrations: safehouse-db-schema"
+          echo "- Orchestration: safehouse-orchestration"
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          echo "📋 Planning infrastructure changes..."
+          echo "Using production configuration: terraform.tfvars"
+          
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "⚠️  Planning DESTROY operation for production infrastructure"
+            terraform plan -destroy -var-file="terraform.tfvars" -out=tfplan
+          else
+            echo "📝 Planning infrastructure deployment/update"
+            terraform plan -var-file="terraform.tfvars" -out=tfplan
+          fi
+
+      - name: Show Plan Summary
+        run: |
+          cd terraform
+          echo "## 📊 Terraform Plan Summary"
+          echo "**Action:** ${{ github.event.inputs.action }}"
+          echo "**Environment:** Production"
+          echo "**Project:** ${{ env.PROJECT_ID }}"
+          echo "**Triggered by:** @${{ github.actor }}"
+          echo "**Commit:** ${{ github.sha }}"
+          echo ""
+          echo "### Plan Output:"
+          terraform show -no-color tfplan
+
+      - name: Upload Plan Artifact
+        if: github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_number }}
+          path: terraform/tfplan
+          retention-days: 7
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply == 'yes'
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-plan-${{ github.run_number }}
+          path: terraform/
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Pre-Apply Confirmation
+        run: |
+          echo "🚨 PRODUCTION INFRASTRUCTURE DEPLOYMENT"
+          echo "======================================="
+          echo "Action: ${{ github.event.inputs.action }}"
+          echo "Environment: Production"
+          echo "Project: ${{ env.PROJECT_ID }}"
+          echo "Repository: ${{ github.event.repository.name }}"
+          echo "Actor: @${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo ""
+          
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "⚠️  WARNING: This will DESTROY the entire production infrastructure!"
+            echo "⚠️  This includes:"
+            echo "   - Cloud Run services"
+            echo "   - Cloud SQL database and data"
+            echo "   - VPC networks and firewall rules"
+            echo "   - Storage buckets and audit logs"
+            echo "   - Service accounts and IAM bindings"
+            echo "⚠️  This action is IRREVERSIBLE!"
+          else
+            echo "✅ Proceeding with production infrastructure deployment..."
+            echo "🔧 This will create/update all Safehouse infrastructure components"
+          fi
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "🗑️ DESTROYING production infrastructure..."
+            terraform apply tfplan
+          else
+            echo "🚀 Applying production infrastructure changes..."
+            terraform apply tfplan
+          fi
+
+      - name: Terraform Output
+        if: github.event.inputs.action == 'apply'
+        id: output
+        run: |
+          cd terraform
+          echo "## 📊 Terraform Outputs"
+          terraform output
+
+      - name: Store Deployment Info
+        if: github.event.inputs.action == 'apply' && success()
+        run: |
+          cd terraform
+          # Create deployment metadata
+          cat > deployment-info.json << EOF
+          {
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "environment": "production",
+            "orchestration_repository": "${{ github.event.repository.name }}",
+            "commit": "${{ github.sha }}",
+            "actor": "${{ github.actor }}",
+            "workflow_run": "${{ github.run_number }}",
+            "project_id": "${{ env.PROJECT_ID }}",
+            "target_services": {
+              "backend": "safehouse-main-back",
+              "frontend": "safehouse-main-front",
+              "migrations": "safehouse-db-schema",
+              "orchestration": "safehouse-orchestration"
+            },
+            "infrastructure_components": {
+              "cloud_run": "deployed",
+              "cloud_sql": "deployed",
+              "vpc_network": "deployed",
+              "secrets": "deployed",
+              "monitoring": "deployed"
+            }
+          }
+          EOF
+          
+          echo "📝 Production infrastructure deployment completed successfully!"
+          echo "📋 Deployment metadata:"
+          cat deployment-info.json
+
+      - name: Notify Success
+        if: success()
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "🗑️ Production infrastructure destruction completed successfully!"
+            echo "🧹 All Safehouse production resources have been removed."
+            echo "📍 Orchestrated by: @${{ github.actor }}"
+          else
+            echo "✅ Production infrastructure deployment completed successfully!"
+            echo "🏗️ All Safehouse components are now deployed and configured."
+            echo "🔗 Check the outputs above for service URLs and connection details."
+            echo "📍 Orchestrated by: @${{ github.actor }}"
+            echo ""
+            echo "🎯 Next steps:"
+            echo "   1. Verify services are healthy via Cloud Console"
+            echo "   2. Deploy application code to the created infrastructure"
+            echo "   3. Run integration tests against the deployed services"
+          fi
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Production infrastructure ${{ github.event.inputs.action }} failed!"
+          echo "🔍 Check the logs above for detailed error information."
+          echo "📍 Orchestrated by: @${{ github.actor }}"
+          echo "📋 Troubleshooting:"
+          echo "   1. Review Terraform plan output for issues"
+          echo "   2. Check Google Cloud Console for resource conflicts"
+          echo "   3. Verify service account permissions"
+          echo "   4. Ensure all required APIs are enabled"
+          exit 1
+
+  safety_check:
+    name: Safety Check
+    runs-on: ubuntu-latest
+    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply != 'yes'
+
+    steps:
+      - name: Safety Warning
+        run: |
+          echo "🚨 PRODUCTION SAFETY CHECK FAILED"
+          echo "=================================="
+          echo ""
+          echo "You selected '${{ github.event.inputs.action }}' but didn't confirm with 'yes'"
+          echo ""
+          echo "To ${{ github.event.inputs.action }} PRODUCTION infrastructure:"
+          echo "1. Set 'Action' to '${{ github.event.inputs.action }}'"
+          echo "2. Set 'Type yes to confirm' to 'yes'"
+          echo "3. Run the workflow again"
+          echo ""
+          echo "⚠️  This prevents accidental production changes!"
+          echo "🏗️ This workflow manages the entire Safehouse infrastructure"
+          echo "📍 Repository: ${{ github.event.repository.name }}"
+          
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo ""
+            echo "🔥 DESTROY will remove ALL production resources:"
+            echo "   - All databases and stored data"
+            echo "   - All running services and applications"
+            echo "   - All network configurations"
+            echo "   - All storage and backup data"
+          fi
+          
+          exit 1

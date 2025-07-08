@@ -10,8 +10,81 @@
 
 .idea/
 
+**/.claude/
+
 # Test binary, built with `go test -c`
 *.test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Terraform
+*.tfstate
+*.tfstate.*
+#*.tfvars
+#*.tfvars.json
+.terraform/
+.terraform.lock.hcl
+terraform.tfplan
+*.backup
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Google Cloud
+.gcloudignore
+service-account-key.json
+*.json.key
+application_default_credentials.json
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and Editor files
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# OS generated files
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Secrets and sensitive files
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# used only for local dev
+dev-secrets/
