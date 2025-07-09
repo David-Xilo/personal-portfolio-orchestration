@@ -79,19 +79,15 @@ resource "google_sql_user" "db_user" {
 
 resource "google_iam_workload_identity_pool" "github_pool" {
   project                   = var.project_id
-  provider                  = google-beta
   workload_identity_pool_id = "safehouse-github-pool"
   display_name              = "GitHub Actions Pool"
-  # location     = "global"
 }
 
 resource "google_iam_workload_identity_pool_provider" "github_provider" {
   project                            = var.project_id
-  provider                           = google-beta
   workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
   workload_identity_pool_provider_id = "safehouse-github-provider"
   display_name                       = "GitHub Actions Provider"
-  # location     = "global"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
@@ -126,7 +122,6 @@ resource "google_cloud_run_service" "safehouse_backend" {
       containers {
         image = "gcr.io/cloudrun/hello"
 
-        // TODO check if it is better to pass the host, db name etc and let backend get the secret itself
         env {
           name  = "DB_HOST"
           value = google_sql_database_instance.db_instance.private_ip_address

@@ -210,6 +210,9 @@ jobs:
             terraform apply tfplan
           else
             echo "🚀 Applying production infrastructure changes..."
+            terraform apply -target="google_project_iam_member.terraform_cicd_roles"
+            # Wait a few seconds for propagation
+            sleep 10
             terraform apply tfplan
           fi
 
