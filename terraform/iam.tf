@@ -16,6 +16,12 @@ locals {
     "roles/logging.configWriter",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/containeranalysis.admin",
+
+    "roles/iam.workloadIdentityPoolAdmin",
+    "roles/storage.admin",
+    "roles/vpcaccess.admin",
+    "roles/secretmanager.admin",
+    "roles/iam.serviceAccountAdmin",
   ]
   allowed_repositories = [
     var.backend_github_repository,
