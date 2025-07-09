@@ -117,7 +117,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
     }
 
     spec {
-      service_account_name = google_service_account.cloud_run_sa.email
+      service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
         image = "gcr.io/cloudrun/hello"
