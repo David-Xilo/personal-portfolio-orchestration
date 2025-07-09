@@ -36,8 +36,8 @@ output "database_instance_name" {
 output "service_account_emails" {
   description = "Service account email addresses"
   value = {
-    cloud_run = data.google_service_account.cloud_run_sa.email
-    cicd      = data.google_service_account.terraform_cicd.email
+    cloud_run = google_service_account.cloud_run_sa.email
+    cicd      = google_service_account.terraform_cicd.email
   }
 }
 
