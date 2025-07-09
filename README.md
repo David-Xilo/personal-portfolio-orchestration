@@ -12,3 +12,9 @@ gcloud config set project personal-portfolio-safehouse
 gcloud auth application-default login
 
 terraform init
+
+# Permissions added manually
+
+gcloud projects add-iam-policy-binding personal-portfolio-safehouse \
+--member="serviceAccount:safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com" \
+--role="roles/iam.serviceAccountViewer"
