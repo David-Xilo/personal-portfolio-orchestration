@@ -5,7 +5,7 @@ terraform {
       version = "~> 4.0"
     }
   }
-  
+
   backend "gcs" {
     bucket = "personal-portfolio-safehouse-terraform-state"
     prefix = "terraform/state"
@@ -21,14 +21,14 @@ provider "google" {
 resource "google_sql_database_instance" "db_instance" {
   name             = "safehouse-db-instance"
   database_version = "POSTGRES_13"
-  region          = var.region
+  region           = var.region
 
   settings {
     tier = "db-f1-micro"
 
     # no need for backup for now
     backup_configuration {
-      enabled                        = false
+      enabled = false
     }
 
     ip_configuration {
@@ -69,26 +69,28 @@ resource "google_sql_user" "db_user" {
   name     = "safehouse_db_user"
   instance = google_sql_database_instance.db_instance.name
   password = data.google_secret_manager_secret_version.db_password.secret_data
-  
+
   lifecycle {
-    ignore_changes = [password]
+    ignore_changes       = [password]
     replace_triggered_by = [time_rotating.pw_trigger.id]
   }
 }
 
 
 resource "google_iam_workload_identity_pool" "github_pool" {
-  provider     = google-beta
+  project                   = var.project_id
+  provider                  = google-beta
   workload_identity_pool_id = "safehouse-github-pool"
-  display_name = "GitHub Actions Pool"
+  display_name              = "GitHub Actions Pool"
   # location     = "global"
 }
 
 resource "google_iam_workload_identity_pool_provider" "github_provider" {
-  provider = google-beta
-  workload_identity_pool_id = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
+  project                            = var.project_id
+  provider                           = google-beta
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
   workload_identity_pool_provider_id = "safehouse-github-provider"
-  display_name = "GitHub Actions Provider"
+  display_name                       = "GitHub Actions Provider"
   # location     = "global"
 
   oidc {

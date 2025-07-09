@@ -15,7 +15,11 @@ resource "google_secret_manager_secret" "db_password" {
   secret_id = "safehouse-db-password"
 
   replication {
-    automatic = true
+    user_managed {
+      replicas {
+        location = var.region # Only one region
+      }
+    }
   }
 
   depends_on = [google_project_service.secret_manager_api]
@@ -25,7 +29,11 @@ resource "google_secret_manager_secret" "jwt_signing_key" {
   secret_id = "safehouse-jwt-signing-key"
 
   replication {
-    automatic = true
+    user_managed {
+      replicas {
+        location = var.region # Only one region
+      }
+    }
   }
 
   depends_on = [google_project_service.secret_manager_api]

@@ -56,7 +56,7 @@ resource "google_monitoring_alert_policy" "unauthorized_access" {
     }
   }
 
-  notification_channels = []  # Add notification channels here
+  notification_channels = [] # Add notification channels here
 
   alert_strategy {
     auto_close = "1800s"
