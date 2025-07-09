@@ -20,6 +20,8 @@ locals {
     "roles/vpcaccess.admin",
     "roles/secretmanager.admin",
     "roles/iam.serviceAccountAdmin",
+
+    "roles/resourcemanager.projectIamAdmin",
   ]
   allowed_repositories = [
     var.backend_github_repository,
