@@ -9,10 +9,8 @@ locals {
   cicd_roles = [
     "roles/cloudsql.editor",
     "roles/run.developer",
-    "roles/secretmanager.secretAccessor",
     "roles/compute.networkAdmin",
     "roles/servicenetworking.networksAdmin",
-    "roles/storage.objectAdmin",
     "roles/logging.configWriter",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/containeranalysis.admin",
