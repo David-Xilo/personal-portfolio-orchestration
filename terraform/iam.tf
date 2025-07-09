@@ -1,7 +1,7 @@
 data "google_project" "project" {}
 
 locals {
-  cloud_run_sa_email = "safehouse-cloud-run@${var.project_id}.iam.gserviceaccount.com"
+  cloud_run_sa_email      = "safehouse-cloud-run@${var.project_id}.iam.gserviceaccount.com"
   terraform_cicd_sa_email = "safehouse-terraform-cicd@${var.project_id}.iam.gserviceaccount.com"
   cloud_run_roles = [
     "roles/cloudsql.client",
