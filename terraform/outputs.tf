@@ -33,15 +33,6 @@ output "database_instance_name" {
   value       = google_sql_database_instance.db_instance.name
 }
 
-output "secret_names" {
-  description = "Names of created secrets"
-  value = {
-    db_password      = google_secret_manager_secret.db_password.secret_id
-    jwt_signing_key  = google_secret_manager_secret.jwt_signing_key.secret_id
-    frontend_auth    = google_secret_manager_secret.frontend_auth_key.secret_id
-  }
-}
-
 output "service_account_emails" {
   description = "Service account email addresses"
   value = {
@@ -74,8 +65,8 @@ output "repository_configuration" {
 output "environment_info" {
   description = "Environment and project information"
   value = {
-    project_id = var.project_id
-    region     = var.region
+    project_id  = var.project_id
+    region      = var.region
     environment = "production"
   }
 }

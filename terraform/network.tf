@@ -3,7 +3,7 @@
 resource "google_compute_network" "vpc" {
   name                    = "safehouse-vpc"
   auto_create_subnetworks = false
-  depends_on             = [google_project_service.compute_api]
+  depends_on              = [google_project_service.compute_api]
 }
 
 resource "google_compute_subnetwork" "subnet" {
@@ -26,7 +26,7 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   network                 = google_compute_network.vpc.id
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
-  depends_on             = [google_project_service.servicenetworking_api]
+  depends_on              = [google_project_service.servicenetworking_api]
 }
 
 # Firewall rules for enhanced security
@@ -38,8 +38,8 @@ resource "google_compute_firewall" "deny_all_ingress" {
     protocol = "all"
   }
 
-  direction = "INGRESS"
-  priority  = 65534
+  direction     = "INGRESS"
+  priority      = 65534
   source_ranges = ["0.0.0.0/0"]
 }
 
@@ -59,8 +59,8 @@ resource "google_compute_firewall" "allow_internal" {
     protocol = "icmp"
   }
 
-  direction = "INGRESS"
-  priority  = 1000
+  direction     = "INGRESS"
+  priority      = 1000
   source_ranges = ["10.0.0.0/8"]
 }
 
@@ -76,8 +76,8 @@ resource "google_compute_firewall" "allow_cloud_sql" {
   direction = "INGRESS"
   priority  = 1000
   source_ranges = [
-    "10.0.0.0/24",     # subnet
-    "10.8.0.0/28"      # VPC connector
+    "10.0.0.0/24", # subnet
+    "10.8.0.0/28"  # VPC connector
   ]
   target_tags = ["cloud-sql"]
 }
@@ -93,7 +93,7 @@ resource "google_compute_firewall" "allow_health_checks" {
   direction = "INGRESS"
   priority  = 1000
   source_ranges = [
-    "130.211.0.0/22",   # Google health check ranges
+    "130.211.0.0/22", # Google health check ranges
     "35.191.0.0/16",
     "209.85.152.0/22",
     "209.85.204.0/22"
@@ -108,8 +108,8 @@ resource "google_compute_firewall" "deny_egress_internet" {
     protocol = "all"
   }
 
-  direction = "EGRESS"
-  priority  = 65534
+  direction          = "EGRESS"
+  priority           = 65534
   destination_ranges = ["0.0.0.0/0"]
 }
 
@@ -129,8 +129,8 @@ resource "google_compute_firewall" "allow_egress_internal" {
     protocol = "icmp"
   }
 
-  direction = "EGRESS"
-  priority  = 1000
+  direction          = "EGRESS"
+  priority           = 1000
   destination_ranges = ["10.0.0.0/8"]
 }
 
