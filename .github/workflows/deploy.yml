@@ -202,12 +202,12 @@ jobs:
             echo "🔧 This will create/update all Safehouse infrastructure components"
           fi
 
-      - name: Import existing service accounts
-        run: |
-          cd terraform
-          terraform import google_service_account.terraform_cicd projects/personal-portfolio-safehouse/serviceAccounts/safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com || true
-          terraform import google_service_account.cloud_run_sa projects/personal-portfolio-safehouse/serviceAccounts/safehouse-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com || true
-        continue-on-error: true
+#      - name: Import existing service accounts
+#        run: |
+#          cd terraform
+#          terraform import google_service_account.terraform_cicd projects/personal-portfolio-safehouse/serviceAccounts/safehouse-terraform-cicd@personal-portfolio-safehouse.iam.gserviceaccount.com || true
+#          terraform import google_service_account.cloud_run_sa projects/personal-portfolio-safehouse/serviceAccounts/safehouse-cloud-run@personal-portfolio-safehouse.iam.gserviceaccount.com || true
+#        continue-on-error: true
 
       - name: Terraform Apply
         run: |
