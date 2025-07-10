@@ -87,7 +87,7 @@ jobs:
 
       - name: Show Configuration
         run: |
-          echo "## 🏗️ Safehouse Infrastructure Deployment"
+          echo "## Safehouse Infrastructure Deployment"
           echo "**Environment:** Production"
           echo "**Project:** ${{ env.PROJECT_ID }}"
           echo "**Orchestration Repository:** ${{ github.event.repository.name }}"
@@ -108,14 +108,14 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          echo "📋 Planning infrastructure changes..."
+          echo " Planning infrastructure changes"
           echo "Using production configuration: terraform.tfvars"
           
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "⚠️  Planning DESTROY operation for production infrastructure"
+            echo " Planning DESTROY operation for production infrastructure"
             terraform plan -destroy -var-file="terraform.tfvars" -out=tfplan
           else
-            echo "📝 Planning infrastructure deployment/update"
+            echo " Planning infrastructure deployment/update"
             terraform plan -var-file="terraform.tfvars" -out=tfplan
           fi
 
@@ -176,44 +176,15 @@ jobs:
           cd terraform
           terraform init
 
-      - name: Pre-Apply Confirmation
-        run: |
-          echo "🚨 PRODUCTION INFRASTRUCTURE DEPLOYMENT"
-          echo "======================================="
-          echo "Action: ${{ github.event.inputs.action }}"
-          echo "Environment: Production"
-          echo "Project: ${{ env.PROJECT_ID }}"
-          echo "Repository: ${{ github.event.repository.name }}"
-          echo "Actor: @${{ github.actor }}"
-          echo "Commit: ${{ github.sha }}"
-          echo ""
-          
-          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "⚠️  WARNING: This will DESTROY the entire production infrastructure!"
-            echo "⚠️  This includes:"
-            echo "   - Cloud Run services"
-            echo "   - Cloud SQL database and data"
-            echo "   - VPC networks and firewall rules"
-            echo "   - Storage buckets and audit logs"
-            echo "   - Service accounts and IAM bindings"
-            echo "⚠️  This action is IRREVERSIBLE!"
-          else
-            echo "✅ Proceeding with production infrastructure deployment..."
-            echo "🔧 This will create/update all Safehouse infrastructure components"
-          fi
-
       - name: Terraform Apply
         run: |
           cd terraform
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "🗑️ DESTROYING production infrastructure..."
-            terraform apply tfplan
+            echo "DESTROYING production infrastructure"
+            terraform destroy -auto-approve
           else
-            echo "🚀 Applying production infrastructure changes..."
-            terraform apply -target="google_project_iam_member.terraform_cicd_roles" -auto-approve
-            # Wait a few seconds for propagation
-            sleep 10
-            terraform apply tfplan
+            echo " Applying production infrastructure changes"
+            terraform apply -auto-approve
           fi
 
       - name: Terraform Output
@@ -254,24 +225,24 @@ jobs:
           }
           EOF
           
-          echo "📝 Production infrastructure deployment completed successfully!"
-          echo "📋 Deployment metadata:"
+          echo " Production infrastructure deployment completed successfully!"
+          echo " Deployment metadata:"
           cat deployment-info.json
 
       - name: Notify Success
         if: success()
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "🗑️ Production infrastructure destruction completed successfully!"
-            echo "🧹 All Safehouse production resources have been removed."
-            echo "📍 Orchestrated by: @${{ github.actor }}"
+            echo "Production infrastructure destruction completed successfully!"
+            echo " All Safehouse production resources have been removed."
+            echo " Orchestrated by: @${{ github.actor }}"
           else
-            echo "✅ Production infrastructure deployment completed successfully!"
-            echo "🏗️ All Safehouse components are now deployed and configured."
-            echo "🔗 Check the outputs above for service URLs and connection details."
-            echo "📍 Orchestrated by: @${{ github.actor }}"
+            echo "Production infrastructure deployment completed successfully!"
+            echo "All Safehouse components are now deployed and configured."
+            echo " Check the outputs above for service URLs and connection details."
+            echo " Orchestrated by: @${{ github.actor }}"
             echo ""
-            echo "🎯 Next steps:"
+            echo " Next steps:"
             echo "   1. Verify services are healthy via Cloud Console"
             echo "   2. Deploy application code to the created infrastructure"
             echo "   3. Run integration tests against the deployed services"
@@ -282,8 +253,8 @@ jobs:
         run: |
           echo "❌ Production infrastructure ${{ github.event.inputs.action }} failed!"
           echo "🔍 Check the logs above for detailed error information."
-          echo "📍 Orchestrated by: @${{ github.actor }}"
-          echo "📋 Troubleshooting:"
+          echo " Orchestrated by: @${{ github.actor }}"
+          echo " Troubleshooting:"
           echo "   1. Review Terraform plan output for issues"
           echo "   2. Check Google Cloud Console for resource conflicts"
           echo "   3. Verify service account permissions"
@@ -298,7 +269,7 @@ jobs:
     steps:
       - name: Safety Warning
         run: |
-          echo "🚨 PRODUCTION SAFETY CHECK FAILED"
+          echo " PRODUCTION SAFETY CHECK FAILED"
           echo "=================================="
           echo ""
           echo "You selected '${{ github.event.inputs.action }}' but didn't confirm with 'yes'"
@@ -308,13 +279,13 @@ jobs:
           echo "2. Set 'Type yes to confirm' to 'yes'"
           echo "3. Run the workflow again"
           echo ""
-          echo "⚠️  This prevents accidental production changes!"
-          echo "🏗️ This workflow manages the entire Safehouse infrastructure"
-          echo "📍 Repository: ${{ github.event.repository.name }}"
+          echo " This prevents accidental production changes!"
+          echo "This workflow manages the entire Safehouse infrastructure"
+          echo " Repository: ${{ github.event.repository.name }}"
           
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo ""
-            echo "🔥 DESTROY will remove ALL production resources:"
+            echo "DESTROY will remove ALL production resources:"
             echo "   - All databases and stored data"
             echo "   - All running services and applications"
             echo "   - All network configurations"
