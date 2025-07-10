@@ -179,13 +179,7 @@ jobs:
       - name: Terraform Apply
         run: |
           cd terraform
-          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "DESTROYING production infrastructure"
-            terraform destroy -auto-approve
-          else
-            echo " Applying production infrastructure changes"
-            terraform apply -auto-approve
-          fi
+          terraform apply tfplan
 
       - name: Terraform Output
         if: github.event.inputs.action == 'apply'
