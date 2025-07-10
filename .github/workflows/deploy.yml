@@ -122,7 +122,7 @@ jobs:
       - name: Show Plan Summary
         run: |
           cd terraform
-          echo "## 📊 Terraform Plan Summary"
+          echo "##Terraform Plan Summary"
           echo "**Action:** ${{ github.event.inputs.action }}"
           echo "**Environment:** Production"
           echo "**Project:** ${{ env.PROJECT_ID }}"
@@ -186,7 +186,7 @@ jobs:
         id: output
         run: |
           cd terraform
-          echo "## 📊 Terraform Outputs"
+          echo "## Terraform Outputs"
           terraform output
 
       - name: Store Deployment Info
@@ -245,8 +245,8 @@ jobs:
       - name: Notify Failure
         if: failure()
         run: |
-          echo "❌ Production infrastructure ${{ github.event.inputs.action }} failed!"
-          echo "🔍 Check the logs above for detailed error information."
+          echo "Production infrastructure ${{ github.event.inputs.action }} failed!"
+          echo "Check the logs above for detailed error information."
           echo " Orchestrated by: @${{ github.actor }}"
           echo " Troubleshooting:"
           echo "   1. Review Terraform plan output for issues"
