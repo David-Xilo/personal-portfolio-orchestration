@@ -41,11 +41,6 @@ output "service_account_emails" {
   }
 }
 
-output "workload_identity_provider" {
-  description = "Workload Identity Provider path for GitHub Actions"
-  value       = google_iam_workload_identity_pool_provider.github_provider.name
-}
-
 output "project_number" {
   description = "Project number for Workload Identity configuration"
   value       = data.google_project.project.number
