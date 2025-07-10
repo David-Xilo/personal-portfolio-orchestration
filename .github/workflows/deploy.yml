@@ -85,21 +85,6 @@ jobs:
         with:
           terraform_version: 1.7.0
 
-      - name: Show Configuration
-        run: |
-          echo "## Safehouse Infrastructure Deployment"
-          echo "**Environment:** Production"
-          echo "**Project:** ${{ env.PROJECT_ID }}"
-          echo "**Orchestration Repository:** ${{ github.event.repository.name }}"
-          echo "**Action:** ${{ github.event.inputs.action }}"
-          echo "**Actor:** @${{ github.actor }}"
-          echo ""
-          echo "**Target Services:**"
-          echo "- Backend: safehouse-main-back"
-          echo "- Frontend: safehouse-main-front"
-          echo "- Database Migrations: safehouse-db-schema"
-          echo "- Orchestration: safehouse-orchestration"
-
       - name: Terraform Init
         run: |
           cd terraform

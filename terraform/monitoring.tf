@@ -24,15 +24,7 @@ resource "google_logging_project_sink" "security_sink" {
   project     = var.project_id
   destination = "storage.googleapis.com/${google_storage_bucket.audit_logs.name}"
 
-  filter = <<EOF
-    protoPayload.methodName:"google.iam.admin.v1.CreateServiceAccount" OR
-    protoPayload.methodName:"google.iam.admin.v1.DeleteServiceAccount" OR
-    protoPayload.methodName:"google.sql.admin.v1.SqlInstancesService.Update" OR
-    protoPayload.methodName:"google.sql.admin.v1.SqlUsersService.Insert" OR
-    protoPayload.methodName:"SetIamPolicy" OR
-    protoPayload.methodName:"google.secretmanager" OR
-    (resource.type="cloud_run_revision" AND httpRequest.status>=400)
-  EOF
+  filter = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"safehouse-backend\" AND httpRequest.status>=400"
 }
 
 
@@ -63,35 +55,3 @@ resource "google_monitoring_alert_policy" "unauthorized_access" {
   }
 }
 
-# Not necessary for now - don't add for cost reduction
-# resource "google_storage_bucket" "terraform_state" {
-#   name          = "${var.project_id}-terraform-state"
-#   location      = var.region
-#   force_destroy = true
-#
-#   versioning {
-#     enabled = false
-#   }
-#
-#   public_access_prevention = "enforced"
-#
-#   lifecycle_rule {
-#     action {
-#       type = "Delete"
-#     }
-#     condition {
-#       age = 15
-#       with_state = "ARCHIVED"
-#     }
-#   }
-#
-#   lifecycle_rule {
-#     action {
-#       type = "SetStorageClass"
-#       storage_class = "ARCHIVE"
-#     }
-#     condition {
-#       age = 7
-#     }
-#   }
-# }

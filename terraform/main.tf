@@ -77,32 +77,6 @@ resource "google_sql_user" "db_user" {
 }
 
 
-resource "google_iam_workload_identity_pool" "github_pool" {
-  project                   = var.project_id
-  workload_identity_pool_id = "safehouse-github-pool"
-  display_name              = "GitHub Actions Pool"
-}
-
-resource "google_iam_workload_identity_pool_provider" "github_provider" {
-  project                            = var.project_id
-  workload_identity_pool_id          = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
-  workload_identity_pool_provider_id = "safehouse-github-provider"
-  display_name                       = "GitHub Actions Provider"
-
-  oidc {
-    issuer_uri = "https://token.actions.githubusercontent.com"
-  }
-
-  attribute_mapping = {
-    "google.subject"             = "assertion.sub"
-    "attribute.actor"            = "assertion.actor"
-    "attribute.repository"       = "assertion.repository"
-    "attribute.repository_owner" = "assertion.repository_owner"
-  }
-
-  attribute_condition = "assertion.repository_owner == 'David-Xilo'"
-}
-
 # Roles for CI/CD
 
 resource "google_cloud_run_service" "safehouse_backend" {

@@ -29,41 +29,6 @@ resource "google_service_networking_connection" "private_vpc_connection" {
   depends_on              = [google_project_service.servicenetworking_api]
 }
 
-# Firewall rules for enhanced security
-resource "google_compute_firewall" "deny_all_ingress" {
-  name    = "deny-all-ingress"
-  network = google_compute_network.vpc.name
-
-  deny {
-    protocol = "all"
-  }
-
-  direction     = "INGRESS"
-  priority      = 65534
-  source_ranges = ["0.0.0.0/0"]
-}
-
-resource "google_compute_firewall" "allow_internal" {
-  name    = "allow-internal-communication"
-  network = google_compute_network.vpc.name
-
-  allow {
-    protocol = "tcp"
-  }
-
-  allow {
-    protocol = "udp"
-  }
-
-  allow {
-    protocol = "icmp"
-  }
-
-  direction     = "INGRESS"
-  priority      = 1000
-  source_ranges = ["10.0.0.0/8"]
-}
-
 resource "google_compute_firewall" "allow_cloud_sql" {
   name    = "allow-cloud-sql"
   network = google_compute_network.vpc.name
@@ -80,58 +45,6 @@ resource "google_compute_firewall" "allow_cloud_sql" {
     "10.8.0.0/28"  # VPC connector
   ]
   target_tags = ["cloud-sql"]
-}
-
-resource "google_compute_firewall" "allow_health_checks" {
-  name    = "allow-health-checks"
-  network = google_compute_network.vpc.name
-
-  allow {
-    protocol = "tcp"
-  }
-
-  direction = "INGRESS"
-  priority  = 1000
-  source_ranges = [
-    "130.211.0.0/22", # Google health check ranges
-    "35.191.0.0/16",
-    "209.85.152.0/22",
-    "209.85.204.0/22"
-  ]
-}
-
-resource "google_compute_firewall" "deny_egress_internet" {
-  name    = "deny-egress-internet"
-  network = google_compute_network.vpc.name
-
-  deny {
-    protocol = "all"
-  }
-
-  direction          = "EGRESS"
-  priority           = 65534
-  destination_ranges = ["0.0.0.0/0"]
-}
-
-resource "google_compute_firewall" "allow_egress_internal" {
-  name    = "allow-egress-internal"
-  network = google_compute_network.vpc.name
-
-  allow {
-    protocol = "tcp"
-  }
-
-  allow {
-    protocol = "udp"
-  }
-
-  allow {
-    protocol = "icmp"
-  }
-
-  direction          = "EGRESS"
-  priority           = 1000
-  destination_ranges = ["10.0.0.0/8"]
 }
 
 resource "google_compute_firewall" "allow_egress_google_apis" {
