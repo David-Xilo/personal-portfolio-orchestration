@@ -18,11 +18,6 @@ output "vpc_connector_name" {
   value       = google_vpc_access_connector.connector.name
 }
 
-output "audit_logs_bucket" {
-  description = "The audit logs storage bucket"
-  value       = google_storage_bucket.audit_logs.name
-}
-
 output "vpc_network_name" {
   description = "The VPC network name"
   value       = google_compute_network.vpc.name
