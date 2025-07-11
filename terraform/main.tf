@@ -94,7 +94,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/cloudrun/hello"
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:0.0.1"
 
         env {
           name  = "DB_HOST"
