@@ -121,7 +121,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:7257f2b018fea35519e508362eaefe86d74187a7"
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:bcd4b59412253501fcfc40500a11cbe0218ffdcc"
 
         env {
           name  = "ENV"
@@ -132,12 +132,6 @@ resource "google_cloud_run_service" "safehouse_backend" {
           name  = "DB_HOST"
           value = "/cloudsql/${google_sql_database_instance.db_instance.connection_name}"
         }
-
-        # Remove DB_PORT since we're using Unix socket
-        # env {
-        #   name  = "DB_PORT"
-        #   value = "5432"
-        # }
 
         env {
           name  = "DB_NAME"
