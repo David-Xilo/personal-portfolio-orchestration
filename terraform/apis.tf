@@ -59,4 +59,10 @@ resource "google_project_service" "iam_credentials_api" {
   disable_on_destroy         = false
 }
 
+resource "google_project_service" "cloudbuild_api" {
+  service                    = "cloudbuild.googleapis.com"
+  disable_dependent_services = true
+  disable_on_destroy         = false
+}
+
 

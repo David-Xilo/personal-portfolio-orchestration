@@ -3,11 +3,10 @@ data "google_project" "project" {}
 locals {
   cloud_run_sa_email      = "safehouse-cloud-run@${var.project_id}.iam.gserviceaccount.com"
   terraform_cicd_sa_email = "safehouse-terraform-cicd@${var.project_id}.iam.gserviceaccount.com"
-  # Hardcode the workload identity pool ID since it was created by bootstrap
-  workload_identity_pool_id = "projects/${data.google_project.project.number}/locations/global/workloadIdentityPools/safehouse-github-pool"
 
   cloud_run_roles = [
     "roles/cloudsql.client",
+    "roles/cloudsql.instanceUser",
     "roles/logging.logWriter",
     "roles/monitoring.metricWriter"
   ]
@@ -58,3 +57,18 @@ resource "google_service_account_iam_member" "github_workload_identity" {
   member             = "principalSet://iam.googleapis.com/projects/${data.google_project.project.number}/locations/global/workloadIdentityPools/safehouse-github-pool/attribute.repository/${var.github_user}/${each.value}"
 }
 
+resource "google_cloud_run_service_iam_member" "migration_invoker" {
+  location = google_cloud_run_service.migrations.location
+  project  = google_cloud_run_service.migrations.project
+  service  = google_cloud_run_service.migrations.name
+  role     = "roles/run.invoker"
+  member   = "user:${var.authorized_user_email}"
+}
+
+resource "google_cloud_run_service_iam_member" "cicd_migration_invoker" {
+  location = google_cloud_run_service.migrations.location
+  project  = google_cloud_run_service.migrations.project
+  service  = google_cloud_run_service.migrations.name
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
+}

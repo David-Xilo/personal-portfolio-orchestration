@@ -65,3 +65,32 @@ output "environment_info" {
     environment = "production"
   }
 }
+
+output "migration_trigger_name" {
+  description = "Cloud Build trigger name for migrations"
+  value       = google_cloudbuild_trigger.run_migrations.name
+}
+
+output "migration_commands" {
+  description = "Commands to run database migrations"
+  value = {
+    # Run migrations up (default)
+    run_up = "gcloud builds run --source=. --config=cloudbuild-migration.yaml --substitutions=_MIGRATION_COMMAND=up"
+
+    # Or trigger the existing trigger
+    trigger_up      = "gcloud builds triggers run ${google_cloudbuild_trigger.run_migrations.name} --substitutions=_MIGRATION_COMMAND=up"
+    trigger_down    = "gcloud builds triggers run ${google_cloudbuild_trigger.run_migrations.name} --substitutions=_MIGRATION_COMMAND=down"
+    trigger_version = "gcloud builds triggers run ${google_cloudbuild_trigger.run_migrations.name} --substitutions=_MIGRATION_COMMAND=version"
+
+    # Check logs
+    check_logs = "gcloud logging read 'resource.type=\"build\" AND protoPayload.methodName=\"google.devtools.cloudbuild.v1.CloudBuild.CreateBuild\"' --limit=10"
+  }
+}
+
+output "build_worker_pool" {
+  description = "Cloud Build worker pool for migrations"
+  value = {
+    name     = google_cloudbuild_worker_pool.migration_pool.name
+    location = google_cloudbuild_worker_pool.migration_pool.location
+  }
+}

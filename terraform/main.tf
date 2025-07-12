@@ -38,6 +38,11 @@ resource "google_sql_database_instance" "db_instance" {
     }
 
     database_flags {
+      name  = "cloudsql.iam_authentication"
+      value = "on"
+    }
+
+    database_flags {
       name  = "log_connections"
       value = "on"
     }
@@ -64,7 +69,6 @@ resource "time_rotating" "pw_trigger" {
   rotation_minutes = 1440 # 24h
 }
 
-# Create database user
 resource "google_sql_user" "db_user" {
   name     = "safehouse_db_user"
   instance = google_sql_database_instance.db_instance.name
