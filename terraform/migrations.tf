@@ -1,10 +1,4 @@
 
-resource "google_sql_user" "migration_iam_user" {
-  name     = data.google_service_account.cloud_run_sa.email
-  instance = google_sql_database_instance.db_instance.name
-  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
-}
-
 resource "google_cloud_run_service" "migrations" {
   name     = "safehouse-migrations"
   location = var.region
