@@ -120,7 +120,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:latest"
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:ea73ecadec6139f3e146dc512bae89fd70285900"
 
         env {
           name  = "ENV"
