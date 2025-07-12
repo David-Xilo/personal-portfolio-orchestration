@@ -153,11 +153,6 @@ resource "google_cloud_run_service" "safehouse_backend" {
           value = "true"
         }
 
-        env {
-          name  = "PORT"
-          value = "8080"
-        }
-
         # Resource limits for security
         resources {
           limits = {
