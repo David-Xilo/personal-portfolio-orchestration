@@ -102,6 +102,69 @@ resource "google_sql_user" "migration_iam_user" {
 }
 
 # Create a null_resource to execute the permission grants automatically
+resource "null_resource" "run_migrations" {
+  # This runs after database is created but before backend service
+  depends_on = [
+    google_sql_database_instance.db_instance,
+    google_sql_database.safehouse_db,
+    google_sql_user.db_user,
+    google_vpc_access_connector.connector,
+    google_cloudbuild_trigger.run_migrations,
+    google_cloudbuild_worker_pool.migration_pool,
+    google_secret_manager_secret_version.db_password
+  ]
+
+  # Trigger migrations using local-exec
+  provisioner "local-exec" {
+    command = <<-EOT
+      echo "Running database migrations..."
+
+      # Wait for database to be fully ready
+      sleep 30
+
+      # Check if migration image exists, build if not
+      if ! gcloud container images describe gcr.io/${var.project_id}/safehouse-migrations:latest >/dev/null 2>&1; then
+        echo "Building migration image..."
+        docker build -f ${path.module}/../Dockerfile -t gcr.io/${var.project_id}/safehouse-migrations:latest ${path.module}/..
+        gcloud auth configure-docker
+        docker push gcr.io/${var.project_id}/safehouse-migrations:latest
+      fi
+
+      # Run migrations
+      BUILD_ID=$(gcloud builds triggers run safehouse-run-migrations \
+        --substitutions=_MIGRATION_COMMAND=up \
+        --format="value(metadata.build.id)")
+
+      echo "Migration build started: $BUILD_ID"
+
+      # Wait for completion
+      gcloud builds log --stream $BUILD_ID
+
+      # Check if successful
+      BUILD_STATUS=$(gcloud builds describe $BUILD_ID --format="value(status)")
+      if [ "$BUILD_STATUS" != "SUCCESS" ]; then
+        echo "Migration failed with status: $BUILD_STATUS"
+        exit 1
+      fi
+
+      echo "Migrations completed successfully"
+    EOT
+
+    environment = {
+      GOOGLE_CLOUD_PROJECT = var.project_id
+    }
+  }
+
+  # Re-run migrations if database instance changes
+  triggers = {
+    database_instance = google_sql_database_instance.db_instance.connection_name
+    database_name     = google_sql_database.safehouse_db.name
+    # Add a trigger for when migration files change
+    migration_hash = filemd5("${path.module}/../run-migrations-prod.sh")
+  }
+}
+
+
 resource "null_resource" "setup_migration_permissions" {
   depends_on = [
     google_sql_user.migration_user,
@@ -154,17 +217,14 @@ resource "null_resource" "setup_migration_permissions" {
 
 resource "google_cloudbuild_trigger" "run_migrations" {
   name        = "safehouse-run-migrations"
-  description = "Manually trigger database migrations"
+  description = "Run database migrations"
 
-  # Manual trigger (can be invoked via API/gcloud)
   manual_trigger {}
 
   build {
-    # Use the migration image we build and push
     step {
       name = "gcr.io/${var.project_id}/safehouse-migrations:latest"
 
-      # Set environment variables for the migration
       env = [
         "DB_HOST=${google_sql_database_instance.db_instance.private_ip_address}",
         "DB_PORT=5432",
@@ -173,14 +233,10 @@ resource "google_cloudbuild_trigger" "run_migrations" {
         "GOOGLE_CLOUD_PROJECT=${var.project_id}"
       ]
 
-      # Get the password from Secret Manager
       secret_env = ["DB_PASSWORD"]
-
-      # The args will be passed when triggering the build
       args = ["$_MIGRATION_COMMAND"]
     }
 
-    # Grant access to the secret
     available_secrets {
       secret_manager {
         version_name = "${google_secret_manager_secret.db_password.secret_id}/versions/latest"
@@ -189,7 +245,6 @@ resource "google_cloudbuild_trigger" "run_migrations" {
     }
 
     options {
-      # Use the VPC for database connectivity
       worker_pool = google_cloudbuild_worker_pool.migration_pool.id
     }
   }
@@ -197,7 +252,6 @@ resource "google_cloudbuild_trigger" "run_migrations" {
   depends_on = [google_project_service.cloudbuild_api]
 }
 
-# Create a private worker pool that can access your VPC
 resource "google_cloudbuild_worker_pool" "migration_pool" {
   name     = "safehouse-migration-pool"
   location = var.region
@@ -205,18 +259,17 @@ resource "google_cloudbuild_worker_pool" "migration_pool" {
   worker_config {
     disk_size_gb   = 10
     machine_type   = "e2-standard-2"
-    no_external_ip = false  # Set to true if you want no external IP
+    no_external_ip = false
   }
 
   network_config {
     peered_network          = google_compute_network.vpc.id
-    peered_network_ip_range = "10.10.0.0/16"  # Different from your existing ranges
+    peered_network_ip_range = "10.10.0.0/16"
   }
 
   depends_on = [google_project_service.cloudbuild_api]
 }
 
-# Grant Cloud Build access to the secret
 resource "google_secret_manager_secret_iam_member" "cloudbuild_secret_access" {
   project   = var.project_id
   secret_id = google_secret_manager_secret.db_password.secret_id
@@ -224,7 +277,6 @@ resource "google_secret_manager_secret_iam_member" "cloudbuild_secret_access" {
   member    = "serviceAccount:${data.google_project.project.number}@cloudbuild.gserviceaccount.com"
 }
 
-# Grant Cloud Build access to pull images
 resource "google_project_iam_member" "cloudbuild_gcr_access" {
   project = var.project_id
   role    = "roles/storage.objectViewer"

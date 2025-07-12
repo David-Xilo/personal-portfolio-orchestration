@@ -117,7 +117,6 @@ resource "google_cloud_run_service" "safehouse_backend" {
     metadata {
       annotations = {
         "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
-        "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.db_instance.connection_name
       }
     }
 
@@ -125,16 +124,16 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:bcd4b59412253501fcfc40500a11cbe0218ffdcc"
-
-        env {
-          name  = "ENV"
-          value = "production"
-        }
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:0.0.1"
 
         env {
           name  = "DB_HOST"
-          value = "/cloudsql/${google_sql_database_instance.db_instance.connection_name}"
+          value = google_sql_database_instance.db_instance.private_ip_address
+        }
+
+        env {
+          name  = "DB_PORT"
+          value = "5432"
         }
 
         env {
@@ -148,33 +147,8 @@ resource "google_cloud_run_service" "safehouse_backend" {
         }
 
         env {
-          name  = "DATABASE_TIMEOUT"
-          value = "10s"
-        }
-
-        env {
-          name  = "READ_TIMEOUT"
-          value = "10s"
-        }
-
-        env {
-          name  = "WRITE_TIMEOUT"
-          value = "1s"
-        }
-
-        env {
-          name  = "JWT_EXPIRATION_MINUTES"
-          value = "30"
-        }
-
-        env {
-          name  = "GCP_PROJECT_ID"
+          name  = "GOOGLE_CLOUD_PROJECT"
           value = var.project_id
-        }
-
-        env {
-          name  = "FRONTEND_URL"
-          value = "https://safehouse-frontend-942519139037.us-central1.run.app"
         }
 
         env {
@@ -196,7 +170,11 @@ resource "google_cloud_run_service" "safehouse_backend" {
     }
   }
 
-  depends_on = [google_project_service.cloud_run_api]
+  # CRITICAL: Make backend depend on migration completion
+  depends_on = [
+    google_project_service.cloud_run_api,
+    null_resource.run_migrations  # This ensures migrations run first!
+  ]
 }
 
 resource "google_cloud_run_service_iam_member" "authenticated_access" {
