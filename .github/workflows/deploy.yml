@@ -17,6 +17,22 @@ on:
         required: false
         default: 'no'
         type: string
+      run_migrations:
+        description: 'Run database migrations after infrastructure deployment'
+        required: false
+        default: true
+        type: boolean
+      migration_command:
+        description: 'Migration command to run'
+        required: false
+        default: 'up'
+        type: choice
+        options:
+          - up
+          - down
+          - version
+          - force
+          - goto
 
 env:
   PROJECT_ID: "personal-portfolio-safehouse"
@@ -93,26 +109,28 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          echo " Planning infrastructure changes"
+          echo "Planning infrastructure changes"
           echo "Using production configuration: terraform.tfvars"
           
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo " Planning DESTROY operation for production infrastructure"
+            echo "Planning DESTROY operation for production infrastructure"
             terraform plan -destroy -var-file="terraform.tfvars" -out=tfplan
           else
-            echo " Planning infrastructure deployment/update"
+            echo "Planning infrastructure deployment/update"
             terraform plan -var-file="terraform.tfvars" -out=tfplan
           fi
 
       - name: Show Plan Summary
         run: |
           cd terraform
-          echo "##Terraform Plan Summary"
+          echo "## Terraform Plan Summary"
           echo "**Action:** ${{ github.event.inputs.action }}"
           echo "**Environment:** Production"
           echo "**Project:** ${{ env.PROJECT_ID }}"
           echo "**Triggered by:** @${{ github.actor }}"
           echo "**Commit:** ${{ github.sha }}"
+          echo "**Run Migrations:** ${{ github.event.inputs.run_migrations }}"
+          echo "**Migration Command:** ${{ github.event.inputs.migration_command }}"
           echo ""
           echo "### Plan Output:"
           terraform show -no-color tfplan
@@ -204,8 +222,8 @@ jobs:
           }
           EOF
           
-          echo " Production infrastructure deployment completed successfully!"
-          echo " Deployment metadata:"
+          echo "Production infrastructure deployment completed successfully!"
+          echo "Deployment metadata:"
           cat deployment-info.json
 
       - name: Notify Success
@@ -213,18 +231,13 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo "Production infrastructure destruction completed successfully!"
-            echo " All Safehouse production resources have been removed."
-            echo " Orchestrated by: @${{ github.actor }}"
+            echo "All Safehouse production resources have been removed."
+            echo "Orchestrated by: @${{ github.actor }}"
           else
             echo "Production infrastructure deployment completed successfully!"
             echo "All Safehouse components are now deployed and configured."
-            echo " Check the outputs above for service URLs and connection details."
-            echo " Orchestrated by: @${{ github.actor }}"
-            echo ""
-            echo " Next steps:"
-            echo "   1. Verify services are healthy via Cloud Console"
-            echo "   2. Deploy application code to the created infrastructure"
-            echo "   3. Run integration tests against the deployed services"
+            echo "Check the outputs above for service URLs and connection details."
+            echo "Orchestrated by: @${{ github.actor }}"
           fi
 
       - name: Notify Failure
@@ -232,12 +245,175 @@ jobs:
         run: |
           echo "Production infrastructure ${{ github.event.inputs.action }} failed!"
           echo "Check the logs above for detailed error information."
-          echo " Orchestrated by: @${{ github.actor }}"
-          echo " Troubleshooting:"
+          echo "Orchestrated by: @${{ github.actor }}"
+          echo "Troubleshooting:"
           echo "   1. Review Terraform plan output for issues"
           echo "   2. Check Google Cloud Console for resource conflicts"
           echo "   3. Verify service account permissions"
           echo "   4. Ensure all required APIs are enabled"
+          exit 1
+
+  migrate:
+    name: Database Migrations
+    runs-on: ubuntu-latest
+    needs: apply
+    if: github.event.inputs.action == 'apply' && github.event.inputs.confirm_apply == 'yes' && github.event.inputs.run_migrations == true
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Wait for Infrastructure Stabilization
+        run: |
+          echo "Waiting for infrastructure to stabilize..."
+          echo "This ensures database and networking are fully ready"
+          sleep 60
+
+      - name: Check Migration Image Exists
+        run: |
+          echo "Checking if migration image exists..."
+          
+          # Check if the migration image exists in GCR
+          if gcloud container images describe gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:latest --format="value(name)" >/dev/null 2>&1; then
+            echo "Migration image found: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:latest"
+          else
+            echo "Migration image not found. Building it now..."
+          
+            # Build the migration image if it doesn't exist
+            docker build -f Dockerfile -t gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:latest .
+          
+            # Configure Docker to use gcloud as credential helper
+            gcloud auth configure-docker
+          
+            # Push the image
+            docker push gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:latest
+          
+            echo "Migration image built and pushed successfully"
+          fi
+
+      - name: Run Database Migrations
+        run: |
+          echo "Running database migrations..."
+          echo "Migration command: ${{ github.event.inputs.migration_command }}"
+          
+          # Trigger the Cloud Build migration job
+          BUILD_ID=$(gcloud builds triggers run safehouse-run-migrations \
+            --substitutions=_MIGRATION_COMMAND=${{ github.event.inputs.migration_command }} \
+            --format="value(metadata.build.id)")
+          
+          echo "Cloud Build job started with ID: $BUILD_ID"
+          echo "You can follow the progress at: https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=${{ env.PROJECT_ID }}"
+          
+          # Wait for the build to complete
+          echo "Waiting for migration to complete..."
+          gcloud builds log --stream $BUILD_ID
+
+      - name: Check Migration Status
+        run: |
+          echo "Checking migration status..."
+          
+          # Get the latest build for our trigger
+          BUILD_ID=$(gcloud builds list \
+            --filter="trigger.name=safehouse-run-migrations" \
+            --limit=1 \
+            --format="value(id)")
+          
+          BUILD_STATUS=$(gcloud builds describe $BUILD_ID --format="value(status)")
+          
+          echo "Latest migration build ID: $BUILD_ID"
+          echo "Migration status: $BUILD_STATUS"
+          
+          if [ "$BUILD_STATUS" = "SUCCESS" ]; then
+            echo "Database migrations completed successfully!"
+          
+            # Get migration logs for summary
+            echo ""
+            echo "Migration Summary:"
+            gcloud logging read "resource.type=\"build\" AND resource.labels.build_id=\"$BUILD_ID\"" \
+              --limit=10 \
+              --format="table(timestamp,textPayload)" \
+              --filter="textPayload:\"Migration\""
+          
+          else
+            echo "Database migrations failed!"
+            echo "Check the build logs above for details"
+            exit 1
+          fi
+
+      - name: Post-Migration Verification
+        if: success()
+        run: |
+          echo "Running post-migration verification..."
+          
+          # Run a version check to verify database state
+          echo "Checking current database schema version..."
+          
+          VERSION_BUILD_ID=$(gcloud builds triggers run safehouse-run-migrations \
+            --substitutions=_MIGRATION_COMMAND=version \
+            --format="value(metadata.build.id)")
+          
+          echo "Getting current schema version..."
+          gcloud builds log --stream $VERSION_BUILD_ID
+          
+          echo "Post-migration verification completed"
+
+      - name: Migration Success Notification
+        if: success()
+        run: |
+          echo "DATABASE MIGRATION COMPLETED SUCCESSFULLY!"
+          echo "=================================="
+          echo ""
+          echo "Summary:"
+          echo "   • Infrastructure: Deployed"
+          echo "   • Database: Ready"
+          echo "   • Migrations: Applied (${{ github.event.inputs.migration_command }})"
+          echo "   • Environment: Production"
+          echo ""
+          echo "Orchestrated by: @${{ github.actor }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Completed: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo ""
+          echo "Next steps:"
+          echo "   1. Infrastructure and database are ready"
+          echo "   2. Deploy your application code"
+          echo "   3. Run integration tests"
+          echo "   4. Monitor application health"
+
+      - name: Migration Failure Notification
+        if: failure()
+        run: |
+          echo "DATABASE MIGRATION FAILED!"
+          echo "=================================="
+          echo ""
+          echo "Migration Status: FAILED"
+          echo "Command attempted: ${{ github.event.inputs.migration_command }}"
+          echo "Infrastructure: Deployed"
+          echo "Database migrations: Failed"
+          echo ""
+          echo "Troubleshooting steps:"
+          echo "   1. Check Cloud Build logs above for specific errors"
+          echo "   2. Verify database connectivity and permissions"
+          echo "   3. Check migration SQL files for syntax errors"
+          echo "   4. Manually run 'version' command to check current state"
+          echo ""
+          echo "Manual recovery:"
+          echo "   gcloud builds triggers run safehouse-run-migrations --substitutions=_MIGRATION_COMMAND=version"
+          echo "   gcloud builds triggers run safehouse-run-migrations --substitutions=_MIGRATION_COMMAND=up"
+          echo ""
+          echo "Orchestrated by: @${{ github.actor }}"
           exit 1
 
   safety_check:
@@ -248,7 +424,7 @@ jobs:
     steps:
       - name: Safety Warning
         run: |
-          echo " PRODUCTION SAFETY CHECK FAILED"
+          echo "PRODUCTION SAFETY CHECK FAILED"
           echo "=================================="
           echo ""
           echo "You selected '${{ github.event.inputs.action }}' but didn't confirm with 'yes'"
@@ -258,9 +434,9 @@ jobs:
           echo "2. Set 'Type yes to confirm' to 'yes'"
           echo "3. Run the workflow again"
           echo ""
-          echo " This prevents accidental production changes!"
+          echo "This prevents accidental production changes!"
           echo "This workflow manages the entire Safehouse infrastructure"
-          echo " Repository: ${{ github.event.repository.name }}"
+          echo "Repository: ${{ github.event.repository.name }}"
           
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo ""

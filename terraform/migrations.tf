@@ -80,6 +80,78 @@ resource "google_cloud_run_service" "migrations" {
   depends_on = [google_project_service.cloud_run_api]
 }
 
+resource "google_sql_user" "migration_user" {
+  name     = "migration_user"  # Short name that fits in 63 chars
+  instance = google_sql_database_instance.db_instance.name
+  password = data.google_secret_manager_secret_version.db_password.secret_data
+}
+
+resource "google_project_iam_member" "cloud_run_cloudsql_access" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${data.google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_sql_user" "migration_iam_user" {
+  name     = "sa-migration"
+  instance = google_sql_database_instance.db_instance.name
+  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+
+  # This maps the short name to your actual service account
+  depends_on = [google_project_iam_member.cloud_run_cloudsql_access]
+}
+
+# Create a null_resource to execute the permission grants automatically
+resource "null_resource" "setup_migration_permissions" {
+  depends_on = [
+    google_sql_user.migration_user,
+    google_sql_database.safehouse_db
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      # Wait for database to be ready
+      sleep 30
+
+      # Get the database password
+      DB_PASSWORD=$(gcloud secrets versions access latest --secret="${google_secret_manager_secret.db_password.secret_id}" --project="${var.project_id}")
+
+      # Set up permissions using the existing db_user (which should have admin rights)
+      PGPASSWORD="$DB_PASSWORD" psql \
+        -h ${google_sql_database_instance.db_instance.private_ip_address} \
+        -U ${google_sql_user.db_user.name} \
+        -d ${google_sql_database.safehouse_db.name} \
+        -c "
+        GRANT ALL PRIVILEGES ON DATABASE ${google_sql_database.safehouse_db.name} TO migration_user;
+        GRANT ALL PRIVILEGES ON SCHEMA public TO migration_user;
+        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO migration_user;
+        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO migration_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO migration_user;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO migration_user;
+
+        -- Create migrations table if it doesn't exist
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            version bigint NOT NULL PRIMARY KEY,
+            dirty boolean NOT NULL
+        );
+
+        -- Grant access to migrations table
+        GRANT ALL PRIVILEGES ON TABLE schema_migrations TO migration_user;
+        "
+    EOT
+
+    environment = {
+      PGPASSWORD = ""  # Will be set by the script
+    }
+  }
+
+  # Re-run permissions if database user changes
+  triggers = {
+    user_id = google_sql_user.migration_user.name
+    db_id   = google_sql_database.safehouse_db.name
+  }
+}
+
 resource "google_cloudbuild_trigger" "run_migrations" {
   name        = "safehouse-run-migrations"
   description = "Manually trigger database migrations"
