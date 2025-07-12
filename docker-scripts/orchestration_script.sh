@@ -8,7 +8,7 @@ PROJECT_ID="personal-portfolio-safehouse"
 NETWORK_NAME="safehouse_dev_network"
 
 FRONTEND_URL=http://localhost
-BACKEND_PORT=4000
+BACKEND_PORT=8080
 FRONTEND_PORT=80
 
 POSTGRES_IMAGE="safehouse_postgres_dev_image"
