@@ -123,6 +123,11 @@ resource "google_cloud_run_service" "safehouse_backend" {
         image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:latest"
 
         env {
+          name  = "ENV"
+          value = "production"
+        }
+
+        env {
           name  = "DB_HOST"
           value = google_sql_database_instance.db_instance.private_ip_address
         }
