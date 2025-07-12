@@ -117,6 +117,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
     metadata {
       annotations = {
         "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
+        "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.db_instance.connection_name
       }
     }
 
@@ -124,7 +125,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:latest"
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:bcd4b59412253501fcfc40500a11cbe0218ffdcc"
 
         env {
           name  = "ENV"
@@ -133,12 +134,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DB_HOST"
-          value = google_sql_database_instance.db_instance.private_ip_address
-        }
-
-        env {
-          name  = "DB_PORT"
-          value = "5432"
+          value = "/cloudsql/${google_sql_database_instance.db_instance.connection_name}"
         }
 
         env {
@@ -181,13 +177,11 @@ resource "google_cloud_run_service" "safehouse_backend" {
           value = "https://safehouse-frontend-942519139037.us-central1.run.app"
         }
 
-        # Add security headers and settings
         env {
           name  = "SECURITY_HEADERS_ENABLED"
           value = "true"
         }
 
-        # Resource limits for security
         resources {
           limits = {
             cpu    = "1000m"
