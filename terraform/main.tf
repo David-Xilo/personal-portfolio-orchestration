@@ -83,7 +83,7 @@ resource "google_cloud_run_service" "safehouse_frontend" {
   template {
     spec {
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-frontend-main:0.0.1"
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-frontend-main:latest"
 
         ports {
           container_port = 80
@@ -120,7 +120,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:0.0.1"
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:latest"
 
         env {
           name  = "DB_HOST"
