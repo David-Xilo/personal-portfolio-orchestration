@@ -52,6 +52,11 @@ output "repository_configuration" {
   }
 }
 
+output "frontend_url" {
+  description = "The URL of the frontend Cloud Run service"
+  value       = google_cloud_run_service.safehouse_frontend.status[0].url
+}
+
 output "environment_info" {
   description = "Environment and project information"
   value = {

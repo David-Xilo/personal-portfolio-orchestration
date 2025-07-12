@@ -76,8 +76,34 @@ resource "google_sql_user" "db_user" {
   }
 }
 
+resource "google_cloud_run_service" "safehouse_frontend" {
+  name     = "safehouse-frontend"
+  location = var.region
 
-# Roles for CI/CD
+  template {
+    spec {
+      containers {
+        image = "gcr.io/personal-portfolio-safehouse/safehouse-frontend-main:0.0.1"
+
+        ports {
+          container_port = 80
+        }
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "512Mi"
+          }
+          requests = {
+            cpu    = "100m"
+            memory = "128Mi"
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.cloud_run_api]
+}
 
 resource "google_cloud_run_service" "safehouse_backend" {
   name     = "safehouse-backend"
@@ -151,5 +177,13 @@ resource "google_cloud_run_service_iam_member" "authenticated_access" {
   service  = google_cloud_run_service.safehouse_backend.name
   role     = "roles/run.invoker"
   member   = "user:${var.authorized_user_email}"
+}
+
+resource "google_cloud_run_service_iam_member" "frontend_public_access" {
+  location = google_cloud_run_service.safehouse_frontend.location
+  project  = google_cloud_run_service.safehouse_frontend.project
+  service  = google_cloud_run_service.safehouse_frontend.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }
 
