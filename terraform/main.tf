@@ -148,22 +148,22 @@ resource "google_cloud_run_service" "safehouse_backend" {
         }
 
         env {
-          name = "DATABASE_TIMEOUT"
+          name  = "DATABASE_TIMEOUT"
           value = "10s"
         }
 
         env {
-          name = "READ_TIMEOUT"
+          name  = "READ_TIMEOUT"
           value = "10s"
         }
 
         env {
-          name = "WRITE_TIMEOUT"
+          name  = "WRITE_TIMEOUT"
           value = "1s"
         }
 
         env {
-          name = "JWT_EXPIRATION_MINUTES"
+          name  = "JWT_EXPIRATION_MINUTES"
           value = "30"
         }
 
