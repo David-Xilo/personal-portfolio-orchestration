@@ -173,7 +173,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
   # CRITICAL: Make backend depend on migration completion
   depends_on = [
     google_project_service.cloud_run_api,
-    null_resource.run_migrations  # This ensures migrations run first!
+    null_resource.run_migrations # This ensures migrations run first!
   ]
 }
 

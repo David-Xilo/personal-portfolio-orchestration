@@ -12,7 +12,7 @@ resource "google_cloud_run_service" "migrations" {
   template {
     metadata {
       annotations = {
-        "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
+        "run.googleapis.com/vpc-access-connector"  = google_vpc_access_connector.connector.name
         "run.googleapis.com/execution-environment" = "gen2"
       }
     }
@@ -81,7 +81,7 @@ resource "google_cloud_run_service" "migrations" {
 }
 
 resource "google_sql_user" "migration_user" {
-  name     = "migration_user"  # Short name that fits in 63 chars
+  name     = "migration_user" # Short name that fits in 63 chars
   instance = google_sql_database_instance.db_instance.name
   password = data.google_secret_manager_secret_version.db_password.secret_data
 }
@@ -204,7 +204,7 @@ resource "null_resource" "setup_migration_permissions" {
     EOT
 
     environment = {
-      PGPASSWORD = ""  # Will be set by the script
+      PGPASSWORD = "" # Will be set by the script
     }
   }
 
@@ -234,7 +234,7 @@ resource "google_cloudbuild_trigger" "run_migrations" {
       ]
 
       secret_env = ["DB_PASSWORD"]
-      args = ["$_MIGRATION_COMMAND"]
+      args       = ["$_MIGRATION_COMMAND"]
     }
 
     available_secrets {
