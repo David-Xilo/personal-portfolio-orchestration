@@ -113,7 +113,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
     metadata {
       annotations = {
         "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
-        "run.googleapis.com/cloudsql-instances" = google_sql_database_instance.db_instance.connection_name
+        "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.db_instance.connection_name
       }
     }
 
