@@ -148,8 +148,33 @@ resource "google_cloud_run_service" "safehouse_backend" {
         }
 
         env {
-          name  = "GOOGLE_CLOUD_PROJECT"
+          name = "DATABASE_TIMEOUT"
+          value = "10s"
+        }
+
+        env {
+          name = "READ_TIMEOUT"
+          value = "10s"
+        }
+
+        env {
+          name = "WRITE_TIMEOUT"
+          value = "1s"
+        }
+
+        env {
+          name = "JWT_EXPIRATION_MINUTES"
+          value = "30"
+        }
+
+        env {
+          name  = "GCP_PROJECT_ID"
           value = var.project_id
+        }
+
+        env {
+          name  = "FRONTEND_URL"
+          value = "https://safehouse-frontend-942519139037.us-central1.run.app"
         }
 
         # Add security headers and settings
