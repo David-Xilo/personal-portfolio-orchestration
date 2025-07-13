@@ -9,8 +9,8 @@ resource "null_resource" "run_migrations" {
   depends_on = [
     google_sql_database_instance.db_instance,
     google_sql_database.safehouse_db,
-    google_sql_user.db_user_iam,  # Depend on IAM user instead of password user
-    google_project_iam_member.cloud_run_sa_roles  # Ensure service account has proper roles
+    google_sql_user.db_user_iam,                 # Depend on IAM user instead of password user
+    google_project_iam_member.cloud_run_sa_roles # Ensure service account has proper roles
   ]
 
   provisioner "local-exec" {
