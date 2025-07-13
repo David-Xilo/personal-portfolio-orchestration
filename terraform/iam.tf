@@ -26,6 +26,8 @@ locals {
     "roles/iam.serviceAccountAdmin",
 
     "roles/resourcemanager.projectIamAdmin",
+
+    "roles/cloudsql.admin",
   ]
   allowed_repositories = [
     var.backend_github_repository,
@@ -56,3 +58,22 @@ resource "google_service_account_iam_member" "github_workload_identity" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/projects/${data.google_project.project.number}/locations/global/workloadIdentityPools/safehouse-github-pool/attribute.repository/${var.github_user}/${each.value}"
 }
+
+resource "google_sql_user" "db_user_iam" {
+  name     = data.google_service_account.cloud_run_sa.email
+  instance = google_sql_database_instance.db_instance.name
+  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+}
+
+# resource "google_project_iam_member" "cloud_run_sa_sql_instance_user" {
+#   project = var.project_id
+#   role    = "roles/cloudsql.instanceUser"
+#   member  = "serviceAccount:${data.google_service_account.cloud_run_sa.email}"
+# }
+
+# Make sure your terraform-cicd service account can manage IAM database users
+# resource "google_project_iam_member" "terraform_cicd_sql_admin" {
+#   project = var.project_id
+#   role    = "roles/cloudsql.admin"
+#   member  = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
+# }

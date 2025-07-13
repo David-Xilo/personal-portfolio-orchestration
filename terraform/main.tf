@@ -123,6 +123,16 @@ resource "google_cloud_run_service" "safehouse_backend" {
           value = google_sql_user.db_user.name
         }
 
+        # env {
+        #   name  = "DB_USER"
+        #   value = data.google_service_account.cloud_run_sa.email
+        # }
+        #
+        # env {
+        #   name  = "USE_IAM_DB_AUTH"
+        #   value = "true"
+        # }
+
         env {
           name  = "DATABASE_TIMEOUT"
           value = "10s"
