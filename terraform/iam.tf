@@ -65,15 +65,20 @@ resource "google_sql_user" "db_user_iam" {
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 }
 
-# resource "google_project_iam_member" "cloud_run_sa_sql_instance_user" {
-#   project = var.project_id
-#   role    = "roles/cloudsql.instanceUser"
-#   member  = "serviceAccount:${data.google_service_account.cloud_run_sa.email}"
-# }
+resource "google_project_iam_member" "db_sa_cloudsql_client" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.db_access.email}"
+}
 
-# Make sure your terraform-cicd service account can manage IAM database users
-# resource "google_project_iam_member" "terraform_cicd_sql_admin" {
-#   project = var.project_id
-#   role    = "roles/cloudsql.admin"
-#   member  = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
-# }
+resource "google_project_iam_member" "db_sa_instance_user" {
+  project = var.project_id
+  role    = "roles/cloudsql.instanceUser"
+  member  = "serviceAccount:${google_service_account.db_access.email}"
+}
+
+resource "google_service_account_iam_member" "cloud_run_impersonate_db_sa" {
+  service_account_id = google_service_account.db_access.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${data.google_service_account.cloud_run_sa.email}"
+}

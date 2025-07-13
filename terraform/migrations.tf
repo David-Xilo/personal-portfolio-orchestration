@@ -1,4 +1,10 @@
 
+resource "google_sql_user" "db_user_iam_short" {
+  name     = google_service_account.db_access.account_id
+  instance = google_sql_database_instance.db_instance.name
+  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+}
+
 data "external" "migration_status" {
   program = ["bash", "-c", "echo '{\"status\": \"completed\"}'"]
 
@@ -9,13 +15,14 @@ resource "null_resource" "run_migrations" {
   depends_on = [
     google_sql_database_instance.db_instance,
     google_sql_database.safehouse_db,
-    google_sql_user.db_user_iam,
-    google_project_iam_member.cloud_run_sa_roles
+    google_sql_user.db_user_iam_short,
+    google_service_account.db_access,
+    google_service_account_iam_member.cloud_run_impersonate_db_sa
   ]
 
   provisioner "local-exec" {
     command = <<-EOT
-      echo "Starting database migration process with IAM authentication"
+      echo "Starting database migration with dedicated database service account"
 
       sleep 60
 
@@ -26,31 +33,20 @@ resource "null_resource" "run_migrations" {
 
       docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
 
-      # Use the short service account name for database username
+      # Use the dedicated service account for database access
       docker run --rm \
         -v "$HOME/.config/gcloud:/home/migrate-user/.config/gcloud:ro" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="safehouse-cloud-run" \
+        -e DATABASE_USER="${google_service_account.db_access.account_id}" \
         -e USE_IAM_AUTH="true" \
+        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e CLOUDSDK_CONFIG="/home/migrate-user/.config/gcloud" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
 
-      echo "Verifying migration completion..."
-      docker run --rm \
-        -v "$HOME/.config/gcloud:/home/migrate-user/.config/gcloud:ro" \
-        -e PROJECT_ID="${var.project_id}" \
-        -e INSTANCE_NAME="safehouse-db-instance" \
-        -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="safehouse-cloud-run" \
-        -e USE_IAM_AUTH="true" \
-        -e CLOUDSDK_CONFIG="/home/migrate-user/.config/gcloud" \
-        --network="host" \
-        gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
-
-      echo "Database migrations completed successfully with IAM authentication!"
+      echo "Database migrations completed with dedicated service account!"
     EOT
 
     environment = {
@@ -61,7 +57,8 @@ resource "null_resource" "run_migrations" {
   triggers = {
     database_connection = google_sql_database_instance.db_instance.connection_name
     database_name       = google_sql_database.safehouse_db.name
-    user_name           = google_sql_user.db_user_iam.name
+    user_name           = google_sql_user.db_user_iam_short.name
+    service_account     = google_service_account.db_access.email
     migration_image     = var.migration_image_tag
     force_rerun         = var.force_migration_rerun
   }
