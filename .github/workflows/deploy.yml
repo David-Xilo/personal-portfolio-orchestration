@@ -261,14 +261,10 @@ jobs:
           gcloud auth configure-docker
 
       - name: Terraform Apply
-        env:
-          GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           cd terraform
-          
           ACCESS_TOKEN=$(gcloud auth print-access-token)
           export TF_VAR_google_access_token="$ACCESS_TOKEN"
-          
           terraform apply tfplan
           
           echo "Applying Terraform configuration..."
