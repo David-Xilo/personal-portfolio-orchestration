@@ -11,7 +11,7 @@ data "google_service_account" "terraform_cicd" {
 
 
 resource "google_service_account" "db_access" {
-  account_id   = "safehouse-db"
+  account_id   = "db_acc"
   display_name = "Safehouse Database Access"
   description  = "Service account for database access with IAM authentication"
 }

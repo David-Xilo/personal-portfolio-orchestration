@@ -60,7 +60,7 @@ resource "google_service_account_iam_member" "github_workload_identity" {
 }
 
 resource "google_sql_user" "db_user_iam" {
-  name     = "safehouse-cloud-run"
+  name     = data.google_service_account.cloud_run_sa.email
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
