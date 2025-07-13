@@ -255,6 +255,11 @@ jobs:
         run: |
           gcloud auth configure-docker
 
+      - name: Setup gcloud for containers
+        run: |
+          gcloud auth application-default print-access-token > /dev/null
+          gcloud auth configure-docker
+
       - name: Terraform Apply
         run: |
           cd terraform

@@ -42,6 +42,7 @@ resource "null_resource" "run_migrations" {
       docker run --rm \
         --user root \
         -v "$HOME/.config/gcloud:/root/.config/gcloud" \
+        -e GOOGLE_APPLICATION_CREDENTIALS="/root/.config/gcloud/application_default_credentials.json" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
@@ -80,6 +81,7 @@ resource "null_resource" "verify_migration_completion" {
       docker run --rm \
         --user root \
         -v "$HOME/.config/gcloud:/root/.config/gcloud" \
+        -e GOOGLE_APPLICATION_CREDENTIALS="/root/.config/gcloud/application_default_credentials.json" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
