@@ -1,6 +1,6 @@
 
 data "google_service_account" "cloud_run_sa" {
-  account_id = "safehouse-cloud-run"
+  account_id = "crun-sa"
   project    = var.project_id
 }
 

@@ -1,6 +1,6 @@
 
 resource "google_sql_user" "db_user_iam_short" {
-  name     = google_service_account.db_access.account_id
+  name     = google_service_account.db_access.email
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
