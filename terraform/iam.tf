@@ -63,6 +63,11 @@ resource "google_sql_user" "db_user_iam" {
   name     = "safehouse-cloud-run"
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+
+  depends_on = [
+    data.google_service_account.cloud_run_sa,
+    google_sql_database_instance.db_instance
+  ]
 }
 
 resource "google_project_iam_member" "db_sa_cloudsql_client" {

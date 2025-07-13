@@ -4,7 +4,10 @@ resource "google_sql_user" "db_user_iam_short" {
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
-  depends_on = [google_service_account.db_access]
+  depends_on = [
+    google_service_account.db_access,
+    google_sql_database_instance.db_instance
+  ]
 }
 
 data "external" "migration_status" {
