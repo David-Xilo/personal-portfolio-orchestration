@@ -104,7 +104,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DB_HOST"
-          value = google_sql_database_instance.db_instance.private_ip_address
+          value = "/cloudsql/${google_sql_database_instance.db_instance.connection_name}"
         }
 
         env {
