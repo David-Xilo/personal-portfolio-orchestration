@@ -9,57 +9,48 @@ resource "null_resource" "run_migrations" {
   depends_on = [
     google_sql_database_instance.db_instance,
     google_sql_database.safehouse_db,
-    google_sql_user.db_user_iam,                 # Depend on IAM user instead of password user
-    google_project_iam_member.cloud_run_sa_roles # Ensure service account has proper roles
+    google_sql_user.db_user_iam,
+    google_project_iam_member.cloud_run_sa_roles
   ]
 
   provisioner "local-exec" {
     command = <<-EOT
       echo "Starting database migration process with IAM authentication"
 
-      # Wait for database to be fully ready
       sleep 60
 
-      # Check if migration image exists in registry
-      echo "Checking for migration image in registry"
       if ! gcloud container images describe gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} --format="value(name)" >/dev/null 2>&1; then
         echo "ERROR: Migration image not found in registry!"
-        echo "Please ensure gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} exists"
-        echo "Build and push it from the migrations repository first"
         exit 1
       fi
 
-      echo "Migration image found. Running migrations with IAM authentication"
-
-      # Pull the migration image
       docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
 
-      # Run migrations with IAM authentication (most secure - no passwords!)
+      # Use the short service account name for database username
       docker run --rm \
         -v "$HOME/.config/gcloud:/home/migrate-user/.config/gcloud:ro" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${data.google_service_account.cloud_run_sa.email}" \
+        -e DATABASE_USER="safehouse-cloud-run" \
         -e USE_IAM_AUTH="true" \
         -e CLOUDSDK_CONFIG="/home/migrate-user/.config/gcloud" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
 
-      # Verify migrations were applied successfully
       echo "Verifying migration completion..."
       docker run --rm \
         -v "$HOME/.config/gcloud:/home/migrate-user/.config/gcloud:ro" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${data.google_service_account.cloud_run_sa.email}" \
+        -e DATABASE_USER="safehouse-cloud-run" \
         -e USE_IAM_AUTH="true" \
         -e CLOUDSDK_CONFIG="/home/migrate-user/.config/gcloud" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
 
-      echo "Database migrations completed and verified successfully with IAM authentication!"
+      echo "Database migrations completed successfully with IAM authentication!"
     EOT
 
     environment = {
@@ -67,7 +58,6 @@ resource "null_resource" "run_migrations" {
     }
   }
 
-  # Trigger re-run if database changes or migration image changes
   triggers = {
     database_connection = google_sql_database_instance.db_instance.connection_name
     database_name       = google_sql_database.safehouse_db.name

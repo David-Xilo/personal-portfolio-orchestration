@@ -125,7 +125,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         # env {
         #   name  = "DB_USER"
-        #   value = data.google_service_account.cloud_run_sa.email
+        #   value = "safehouse-cloud-run"
         # }
         #
         # env {
