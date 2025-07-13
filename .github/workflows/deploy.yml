@@ -252,10 +252,14 @@ jobs:
           gcloud auth configure-docker
 
       - name: Terraform Apply
+        env:
+          TF_VAR_google_access_token: ${{ steps.auth.outputs.access_token }}
         run: |
           cd terraform
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
-          terraform apply -var="google_access_token=$ACCESS_TOKEN" tfplan
+          if [ -z "$TF_VAR_google_access_token" ]; then
+            export TF_VAR_google_access_token=$(gcloud auth print-access-token)
+          fi
+          terraform apply tfplan
 
       - name: Terraform Output
         if: github.event.inputs.action == 'apply'
