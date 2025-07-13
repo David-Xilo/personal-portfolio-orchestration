@@ -66,31 +66,31 @@ output "environment_info" {
   }
 }
 
-output "migration_trigger_name" {
-  description = "Cloud Build trigger name for migrations"
-  value       = google_cloudbuild_trigger.run_migrations.name
-}
-
-output "migration_commands" {
-  description = "Commands to run database migrations"
+output "deployment_images" {
+  description = "Docker images used in this deployment"
   value = {
-    # Run migrations up (default)
-    run_up = "gcloud builds run --source=. --config=cloudbuild-migration.yaml --substitutions=_MIGRATION_COMMAND=up"
-
-    # Or trigger the existing trigger
-    trigger_up      = "gcloud builds triggers run ${google_cloudbuild_trigger.run_migrations.name} --substitutions=_MIGRATION_COMMAND=up"
-    trigger_down    = "gcloud builds triggers run ${google_cloudbuild_trigger.run_migrations.name} --substitutions=_MIGRATION_COMMAND=down"
-    trigger_version = "gcloud builds triggers run ${google_cloudbuild_trigger.run_migrations.name} --substitutions=_MIGRATION_COMMAND=version"
-
-    # Check logs
-    check_logs = "gcloud logging read 'resource.type=\"build\" AND protoPayload.methodName=\"google.devtools.cloudbuild.v1.CloudBuild.CreateBuild\"' --limit=10"
+    migration = "gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
+    backend   = "gcr.io/${var.project_id}/safehouse-backend-main:${var.backend_image_tag}"
+    frontend  = "gcr.io/${var.project_id}/safehouse-frontend-main:${var.frontend_image_tag}"
   }
 }
 
-output "build_worker_pool" {
-  description = "Cloud Build worker pool for migrations"
+output "image_tags" {
+  description = "Image tags used in this deployment"
   value = {
-    name     = google_cloudbuild_worker_pool.migration_pool.name
-    location = google_cloudbuild_worker_pool.migration_pool.location
+    migration = var.migration_image_tag
+    backend   = var.backend_image_tag
+    frontend  = var.frontend_image_tag
+  }
+}
+
+output "manual_migration_commands" {
+  description = "Commands to run migrations manually"
+  value = {
+    pull_image     = "docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
+    run_up         = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up"
+    run_version    = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version"
+    run_down       = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} down"
+    current_tag    = "Currently using migration image: gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
   }
 }

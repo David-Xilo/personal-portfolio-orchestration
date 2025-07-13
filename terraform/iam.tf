@@ -56,19 +56,3 @@ resource "google_service_account_iam_member" "github_workload_identity" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/projects/${data.google_project.project.number}/locations/global/workloadIdentityPools/safehouse-github-pool/attribute.repository/${var.github_user}/${each.value}"
 }
-
-resource "google_cloud_run_service_iam_member" "migration_invoker" {
-  location = google_cloud_run_service.migrations.location
-  project  = google_cloud_run_service.migrations.project
-  service  = google_cloud_run_service.migrations.name
-  role     = "roles/run.invoker"
-  member   = "user:${var.authorized_user_email}"
-}
-
-resource "google_cloud_run_service_iam_member" "cicd_migration_invoker" {
-  location = google_cloud_run_service.migrations.location
-  project  = google_cloud_run_service.migrations.project
-  service  = google_cloud_run_service.migrations.name
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
-}

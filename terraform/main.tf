@@ -80,35 +80,6 @@ resource "google_sql_user" "db_user" {
   }
 }
 
-resource "google_cloud_run_service" "safehouse_frontend" {
-  name     = "safehouse-frontend"
-  location = var.region
-
-  template {
-    spec {
-      containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-frontend-main:latest"
-
-        ports {
-          container_port = 80
-        }
-        resources {
-          limits = {
-            cpu    = "1000m"
-            memory = "512Mi"
-          }
-          requests = {
-            cpu    = "100m"
-            memory = "128Mi"
-          }
-        }
-      }
-    }
-  }
-
-  depends_on = [google_project_service.cloud_run_api]
-}
-
 resource "google_cloud_run_service" "safehouse_backend" {
   name     = "safehouse-backend"
   location = var.region
@@ -124,7 +95,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/personal-portfolio-safehouse/safehouse-backend-main:0.0.1"
+        image = "gcr.io/${var.project_id}/safehouse-backend-main:${var.backend_image_tag}"
 
         env {
           name  = "DB_HOST"
@@ -170,11 +141,39 @@ resource "google_cloud_run_service" "safehouse_backend" {
     }
   }
 
-  # CRITICAL: Make backend depend on migration completion
   depends_on = [
     google_project_service.cloud_run_api,
-    null_resource.run_migrations # This ensures migrations run first!
+    null_resource.run_migrations
   ]
+}
+
+resource "google_cloud_run_service" "safehouse_frontend" {
+  name     = "safehouse-frontend"
+  location = var.region
+
+  template {
+    spec {
+      containers {
+        image = "gcr.io/${var.project_id}/safehouse-frontend-main:${var.frontend_image_tag}"
+
+        ports {
+          container_port = 80
+        }
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "512Mi"
+          }
+          requests = {
+            cpu    = "100m"
+            memory = "128Mi"
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.cloud_run_api]
 }
 
 resource "google_cloud_run_service_iam_member" "authenticated_access" {

@@ -45,3 +45,28 @@ variable "github_user" {
   type        = string
   default     = "David-Xilo"
 }
+
+variable "force_migration_rerun" {
+  description = "Force migration to re-run by changing this value"
+  type        = string
+  default     = "1"
+}
+
+variable "migration_image_tag" {
+  description = "Tag for the migration Docker image"
+  type        = string
+  default     = "latest"
+}
+
+variable "backend_image_tag" {
+  description = "Tag for the backend Docker image"
+  type        = string
+  default     = "0.0.1"
+}
+
+variable "frontend_image_tag" {
+  description = "Tag for the frontend Docker image"
+  type        = string
+  default     = "0.0.1"
+}
+

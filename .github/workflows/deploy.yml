@@ -17,6 +17,21 @@ on:
         required: false
         default: 'no'
         type: string
+      migration_image_tag:
+        description: 'Migration image tag to use (e.g., latest, v1.0.0, commit-sha)'
+        required: true
+        default: 'latest'
+        type: string
+      backend_image_tag:
+        description: 'Backend image tag to use (e.g., latest, v1.0.0, commit-sha)'
+        required: false
+        default: 'latest'
+        type: string
+      frontend_image_tag:
+        description: 'Frontend image tag to use (e.g., latest, v1.0.0, commit-sha)'
+        required: false
+        default: 'latest'
+        type: string
 
 env:
   PROJECT_ID: "personal-portfolio-safehouse"
@@ -61,6 +76,67 @@ jobs:
           cd terraform
           terraform validate
 
+  check_images:
+    name: Check Required Images
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event.inputs.action == 'apply'
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Check Migration Image Exists
+        run: |
+          echo "Checking for migration image..."
+          MIGRATION_TAG="${{ github.event.inputs.migration_image_tag }}"
+          MIGRATION_IMAGE="gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${MIGRATION_TAG}"
+          
+          if gcloud container images describe $MIGRATION_IMAGE --format="value(name)" >/dev/null 2>&1; then
+            echo "Migration image found: $MIGRATION_IMAGE"
+          else
+            echo "ERROR: Migration image not found!"
+            echo "Expected: $MIGRATION_IMAGE"
+            exit 1
+          fi
+
+      - name: Check Backend Image Exists (if specified)
+        if: github.event.inputs.backend_image_tag != 'latest'
+        run: |
+          echo "Checking for backend image..."
+          BACKEND_TAG="${{ github.event.inputs.backend_image_tag }}"
+          BACKEND_IMAGE="gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${BACKEND_TAG}"
+          
+          if gcloud container images describe $BACKEND_IMAGE --format="value(name)" >/dev/null 2>&1; then
+            echo "Backend image found: $BACKEND_IMAGE"
+          else
+            echo "WARNING: Backend image not found: $BACKEND_IMAGE"
+            echo "Will attempt to use existing image in Terraform"
+          fi
+
+      - name: Check Frontend Image Exists (if specified)
+        if: github.event.inputs.frontend_image_tag != 'latest'
+        run: |
+          echo "Checking for frontend image..."
+          FRONTEND_TAG="${{ github.event.inputs.frontend_image_tag }}"
+          FRONTEND_IMAGE="gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${FRONTEND_TAG}"
+          
+          if gcloud container images describe $FRONTEND_IMAGE --format="value(name)" >/dev/null 2>&1; then
+            echo "Frontend image found: $FRONTEND_IMAGE"
+          else
+            echo "WARNING: Frontend image not found: $FRONTEND_IMAGE"
+            echo "Will attempt to use existing image in Terraform"
+          fi
+
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
@@ -95,14 +171,21 @@ jobs:
           cd terraform
           echo "Planning infrastructure changes"
           echo "Using production configuration: terraform.tfvars"
+          echo "Migration image: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
+          echo "Backend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
+          echo "Frontend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
           
-          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
-            echo "Planning DESTROY operation for production infrastructure"
-            terraform plan -destroy -var-file="terraform.tfvars" -out=tfplan
-          else
-            echo "Planning infrastructure deployment/update"
-            terraform plan -var-file="terraform.tfvars" -out=tfplan
-          fi
+          # Set Terraform variables for image tags
+          TF_VAR_migration_image_tag="${{ github.event.inputs.migration_image_tag }}" \
+          TF_VAR_backend_image_tag="${{ github.event.inputs.backend_image_tag }}" \
+          TF_VAR_frontend_image_tag="${{ github.event.inputs.frontend_image_tag }}" \
+          terraform plan \
+            -var-file="terraform.tfvars" \
+            -var="migration_image_tag=${{ github.event.inputs.migration_image_tag }}" \
+            -var="backend_image_tag=${{ github.event.inputs.backend_image_tag }}" \
+            -var="frontend_image_tag=${{ github.event.inputs.frontend_image_tag }}" \
+            $(if [ "${{ github.event.inputs.action }}" == "destroy" ]; then echo "-destroy"; fi) \
+            -out=tfplan
 
       - name: Show Plan Summary
         run: |
@@ -113,6 +196,12 @@ jobs:
           echo "**Project:** ${{ env.PROJECT_ID }}"
           echo "**Triggered by:** @${{ github.actor }}"
           echo "**Commit:** ${{ github.sha }}"
+          echo ""
+          echo "**Image Configuration:**"
+          echo "- **Migration Image:** \`gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}\`"
+          echo "- **Backend Image:** \`gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}\`"
+          echo "- **Frontend Image:** \`gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}\`"
+          echo ""
           echo "**Migration Handling:** Automatic (via Terraform)"
           echo ""
           echo "### Plan Output:"
@@ -129,7 +218,7 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: plan
+    needs: [plan, check_images]
     if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply == 'yes'
     environment: production
     permissions:
@@ -162,15 +251,19 @@ jobs:
           cd terraform
           terraform init
 
-      - name: Setup Docker for Migration Image Build
-        if: github.event.inputs.action == 'apply'
+      - name: Configure Docker for Image Pull
         run: |
-          # Ensure gcloud can push Docker images
           gcloud auth configure-docker
 
       - name: Terraform Apply
         run: |
           cd terraform
+          echo "Applying Terraform configuration..."
+          echo "Migration image: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
+          echo "Backend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
+          echo "Frontend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
+          echo ""
+          
           terraform apply tfplan
 
       - name: Terraform Output
@@ -181,20 +274,18 @@ jobs:
           echo "## Terraform Outputs"
           terraform output
 
-#      - name: Verify Deployment
-#        if: github.event.inputs.action == 'apply'
-#        run: |
-#          echo "Verifying deployment status..."
-#
-#          # Check backend service status
-#          BACKEND_URL=$(cd terraform && terraform output -raw cloud_run_url)
-#          echo "Backend URL: $BACKEND_URL"
-#
-#          # Check frontend service status
-#          FRONTEND_URL=$(cd terraform && terraform output -raw frontend_url)
-#          echo "Frontend URL: $FRONTEND_URL"
-#
-#          echo "Deployment verification completed"
+      - name: Verify Deployment
+        if: github.event.inputs.action == 'apply'
+        run: |
+          echo "Verifying deployment status..."
+          
+          BACKEND_URL=$(cd terraform && terraform output -raw cloud_run_url)
+          echo "Backend URL: $BACKEND_URL"
+          
+          FRONTEND_URL=$(cd terraform && terraform output -raw frontend_url)
+          echo "Frontend URL: $FRONTEND_URL"
+          
+          echo "Deployment verification completed"
 
       - name: Store Deployment Info
         if: github.event.inputs.action == 'apply' && success()
@@ -209,14 +300,18 @@ jobs:
             "actor": "${{ github.actor }}",
             "workflow_run": "${{ github.run_number }}",
             "project_id": "${{ env.PROJECT_ID }}",
-            "deployment_method": "terraform_managed_migrations",
+            "images": {
+              "migration": "gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}",
+              "backend": "gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}",
+              "frontend": "gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
+            },
+            "deployment_method": "terraform_with_specified_images",
             "infrastructure_components": {
               "cloud_run": "deployed",
               "cloud_sql": "deployed", 
               "migrations": "applied",
               "vpc_network": "deployed",
-              "secrets": "deployed",
-              "monitoring": "deployed"
+              "secrets": "deployed"
             }
           }
           EOF
@@ -225,7 +320,7 @@ jobs:
           echo "Deployment metadata:"
           cat deployment-info.json
 
-      - name: Notify Success
+      - name: Final Success Notification
         if: success()
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
@@ -236,17 +331,34 @@ jobs:
             echo "DEPLOYMENT COMPLETED SUCCESSFULLY!"
             echo "=================================="
             echo ""
+            echo "Infrastructure Status:"
+            echo "   • Database: Deployed and migrated"
+            echo "   • Backend Service: Deployed"
+            echo "   • Frontend Service: Deployed"
+            echo "   • VPC & Networking: Configured"
+            echo "   • Security & Secrets: Configured"
+            echo ""
+            echo "Image Configuration:"
+            echo "   • Migration: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
+            echo "   • Backend: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
+            echo "   • Frontend: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
+            echo ""
             echo "Orchestrated by: @${{ github.actor }}"
             echo "Commit: ${{ github.sha }}"
             echo "Completed: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
 
-      - name: Notify Failure
+      - name: Deployment Failure Notification
         if: failure()
         run: |
           echo "Production infrastructure ${{ github.event.inputs.action }} failed!"
           echo "Check the logs above for detailed error information."
           echo "Orchestrated by: @${{ github.actor }}"
+          echo ""
+          echo "Image Configuration Used:"
+          echo "   • Migration: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
+          echo "   • Backend: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
+          echo "   • Frontend: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
           exit 1
 
   safety_check:
