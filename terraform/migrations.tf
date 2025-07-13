@@ -41,14 +41,13 @@ resource "null_resource" "run_migrations" {
       # Use the dedicated service account for database access
       docker run --rm \
         --user root \
-        -v "$HOME/.config/gcloud:/root/.config/gcloud" \
-        -e GOOGLE_APPLICATION_CREDENTIALS="/root/.config/gcloud/application_default_credentials.json" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_service_account.db_access.account_id}" \
         -e USE_IAM_AUTH="true" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
+        -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
 
@@ -77,17 +76,15 @@ resource "null_resource" "verify_migration_completion" {
     command = <<-EOT
       echo "Verifying migration completion..."
 
-      # Verify migration was successful by checking database schema
       docker run --rm \
         --user root \
-        -v "$HOME/.config/gcloud:/root/.config/gcloud" \
-        -e GOOGLE_APPLICATION_CREDENTIALS="/root/.config/gcloud/application_default_credentials.json" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_service_account.db_access.account_id}" \
         -e USE_IAM_AUTH="true" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
+        -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
 

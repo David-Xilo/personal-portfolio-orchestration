@@ -261,8 +261,16 @@ jobs:
           gcloud auth configure-docker
 
       - name: Terraform Apply
+        env:
+          GOOGLE_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           cd terraform
+          
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          export TF_VAR_google_access_token="$ACCESS_TOKEN"
+          
+          terraform apply tfplan
+          
           echo "Applying Terraform configuration..."
           echo "Migration image: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
           echo "Backend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
