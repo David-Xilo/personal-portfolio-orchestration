@@ -175,10 +175,6 @@ jobs:
           echo "Backend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
           echo "Frontend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
           
-          # Set Terraform variables for image tags
-          TF_VAR_migration_image_tag="${{ github.event.inputs.migration_image_tag }}" \
-          TF_VAR_backend_image_tag="${{ github.event.inputs.backend_image_tag }}" \
-          TF_VAR_frontend_image_tag="${{ github.event.inputs.frontend_image_tag }}" \
           terraform plan \
             -var-file="terraform.tfvars" \
             -var="migration_image_tag=${{ github.event.inputs.migration_image_tag }}" \
@@ -255,25 +251,11 @@ jobs:
         run: |
           gcloud auth configure-docker
 
-      - name: Setup gcloud for containers
-        run: |
-          gcloud auth application-default print-access-token > /dev/null
-          gcloud auth configure-docker
-
       - name: Terraform Apply
         run: |
           cd terraform
           ACCESS_TOKEN=$(gcloud auth print-access-token)
-          export TF_VAR_google_access_token="$ACCESS_TOKEN"
-          terraform apply tfplan
-          
-          echo "Applying Terraform configuration..."
-          echo "Migration image: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
-          echo "Backend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
-          echo "Frontend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
-          echo ""
-          
-          terraform apply tfplan
+          terraform apply -var="google_access_token=$ACCESS_TOKEN" tfplan
 
       - name: Terraform Output
         if: github.event.inputs.action == 'apply'
