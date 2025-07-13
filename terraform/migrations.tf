@@ -50,9 +50,9 @@ resource "null_resource" "run_migrations" {
   # Trigger re-run if database changes or migration image changes
   triggers = {
     database_connection = google_sql_database_instance.db_instance.connection_name
-    database_name      = google_sql_database.safehouse_db.name
-    user_name         = google_sql_user.db_user.name
-    migration_image   = var.migration_image_tag
-    force_rerun       = var.force_migration_rerun
+    database_name       = google_sql_database.safehouse_db.name
+    user_name           = google_sql_user.db_user.name
+    migration_image     = var.migration_image_tag
+    force_rerun         = var.force_migration_rerun
   }
 }

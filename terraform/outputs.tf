@@ -87,10 +87,10 @@ output "image_tags" {
 output "manual_migration_commands" {
   description = "Commands to run migrations manually"
   value = {
-    pull_image     = "docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
-    run_up         = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up"
-    run_version    = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version"
-    run_down       = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} down"
-    current_tag    = "Currently using migration image: gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
+    pull_image  = "docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
+    run_up      = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up"
+    run_version = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version"
+    run_down    = "docker run --rm -v $HOME/.config/gcloud:/root/.config/gcloud:ro -e PROJECT_ID=${var.project_id} -e INSTANCE_NAME=safehouse-db-instance -e DATABASE_NAME=safehouse_db -e DATABASE_USER=safehouse_db_user -e PASSWORD_SECRET=safehouse-db-password --network=host gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} down"
+    current_tag = "Currently using migration image: gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}"
   }
 }
