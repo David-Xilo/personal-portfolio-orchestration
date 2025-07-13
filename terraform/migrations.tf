@@ -41,14 +41,13 @@ resource "null_resource" "run_migrations" {
       # Use the dedicated service account for database access
       docker run --rm \
         --user root \
-        -v "$HOME/.config/gcloud:/home/migrate-user/.config/gcloud:ro" \
+        -v "$HOME/.config/gcloud:/root/.config/gcloud:ro" \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_service_account.db_access.account_id}" \
         -e USE_IAM_AUTH="true" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
-        -e CLOUDSDK_CONFIG="/home/migrate-user/.config/gcloud" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
 
@@ -84,8 +83,9 @@ resource "null_resource" "verify_migration_completion" {
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="safehouse_db_user" \
-        -e PASSWORD_SECRET="safehouse-db-password" \
+        -e DATABASE_USER="${google_service_account.db_access.account_id}" \
+        -e USE_IAM_AUTH="true" \
+        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
 
