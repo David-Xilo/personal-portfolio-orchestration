@@ -60,7 +60,7 @@ resource "google_service_account_iam_member" "github_workload_identity" {
 }
 
 resource "google_sql_user" "db_user_iam" {
-  name     = data.google_service_account.cloud_run_sa.email
+  name     = "crun-sa@personal-portfolio-safehouse.iam"
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
