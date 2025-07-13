@@ -89,6 +89,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       annotations = {
         "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
         "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.db_instance.connection_name
+        "autoscaling.knative.dev/maxScale"        = "1"
       }
     }
 
@@ -124,8 +125,14 @@ resource "google_cloud_run_service" "safehouse_backend" {
         }
 
         # env {
+        #   name  = "DB_PASSWORD_SECRET"
+        #   value = google_secret_manager_secret.db_password.secret_id
+        # }
+
+        # Option 2: Uncomment these for IAM authentication instead
+        # env {
         #   name  = "DB_USER"
-        #   value = google_service_account.db_access.account_id
+        #   value = "safehouse-cloud-run@${var.project_id}.iam"
         # }
         #
         # env {
@@ -135,12 +142,12 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DATABASE_TIMEOUT"
-          value = "10s"
+          value = "30s"
         }
 
         env {
           name  = "READ_TIMEOUT"
-          value = "10s"
+          value = "30s"
         }
 
         env {
@@ -178,15 +185,42 @@ resource "google_cloud_run_service" "safehouse_backend" {
             memory = "128Mi"
           }
         }
+
+        # Add startup and liveness probes
+        startup_probe {
+          http_get {
+            path = "/health"
+          }
+          initial_delay_seconds = 60
+          timeout_seconds       = 10
+          period_seconds        = 10
+          failure_threshold     = 10
+        }
+
+        liveness_probe {
+          http_get {
+            path = "/health"
+          }
+          initial_delay_seconds = 30
+          timeout_seconds       = 5
+          period_seconds        = 30
+        }
       }
     }
   }
 
   depends_on = [
     google_project_service.cloud_run_api,
+    google_sql_database_instance.db_instance,
+    google_vpc_access_connector.connector,
     null_resource.run_migrations,
     data.external.migration_status
   ]
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
 }
 
 resource "google_cloud_run_service" "safehouse_frontend" {

@@ -8,7 +8,8 @@ locals {
     "roles/cloudsql.client",
     "roles/cloudsql.instanceUser",
     "roles/logging.logWriter",
-    "roles/monitoring.metricWriter"
+    "roles/monitoring.metricWriter",
+    "roles/secretmanager.secretAccessor"
   ]
   cicd_roles = [
     "roles/cloudsql.editor",
@@ -60,7 +61,7 @@ resource "google_service_account_iam_member" "github_workload_identity" {
 }
 
 resource "google_sql_user" "db_user_iam" {
-  name     = "crun-sa@personal-portfolio-safehouse.iam"
+  name     = "safehouse-cloud-run@${var.project_id}.iam" # Fixed naming
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
