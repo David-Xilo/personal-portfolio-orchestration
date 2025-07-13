@@ -98,6 +98,11 @@ resource "google_cloud_run_service" "safehouse_backend" {
         image = "gcr.io/${var.project_id}/safehouse-backend-main:${var.backend_image_tag}"
 
         env {
+          name  = "ENV"
+          value = "production"
+        }
+
+        env {
           name  = "DB_HOST"
           value = google_sql_database_instance.db_instance.private_ip_address
         }
@@ -118,8 +123,33 @@ resource "google_cloud_run_service" "safehouse_backend" {
         }
 
         env {
-          name  = "GOOGLE_CLOUD_PROJECT"
+          name  = "DATABASE_TIMEOUT"
+          value = "10s"
+        }
+
+        env {
+          name  = "READ_TIMEOUT"
+          value = "10s"
+        }
+
+        env {
+          name  = "WRITE_TIMEOUT"
+          value = "1s"
+        }
+
+        env {
+          name  = "JWT_EXPIRATION_MINUTES"
+          value = "30"
+        }
+
+        env {
+          name  = "GCP_PROJECT_ID"
           value = var.project_id
+        }
+
+        env {
+          name  = "FRONTEND_URL"
+          value = "https://safehouse-frontend-942519139037.us-central1.run.app"
         }
 
         env {
