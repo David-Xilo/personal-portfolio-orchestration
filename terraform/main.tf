@@ -174,7 +174,8 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
   depends_on = [
     google_project_service.cloud_run_api,
-    null_resource.run_migrations
+    null_resource.run_migrations,
+    data.external.migration_status
   ]
 }
 
