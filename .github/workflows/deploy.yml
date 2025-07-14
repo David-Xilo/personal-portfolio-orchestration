@@ -169,21 +169,18 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
-          echo "Planning infrastructure changes"
-          echo "Using production configuration: terraform.tfvars"
-          echo "Migration image: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
-          echo "Backend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
-          echo "Frontend image: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
-
           ACCESS_TOKEN=$(gcloud auth print-access-token)
+          CONNECTION_NAME=$(gcloud sql instances describe safehouse-db-instance --project=personal-portfolio-safehouse --format="value(connectionName)")
+
           terraform plan \
-          -var-file="terraform.tfvars" \
-          -var="migration_image_tag=${{ github.event.inputs.migration_image_tag }}" \
-          -var="backend_image_tag=${{ github.event.inputs.backend_image_tag }}" \
-          -var="frontend_image_tag=${{ github.event.inputs.frontend_image_tag }}" \
-          -var="google_access_token=$ACCESS_TOKEN" \
-          $(if [ "${{ github.event.inputs.action }}" == "destroy" ]; then echo "-destroy"; fi) \
-          -out=tfplan
+            -var-file="terraform.tfvars" \
+            -var="migration_image_tag=${{ github.event.inputs.migration_image_tag }}" \
+            -var="backend_image_tag=${{ github.event.inputs.backend_image_tag }}" \
+            -var="frontend_image_tag=${{ github.event.inputs.frontend_image_tag }}" \
+            -var="google_access_token=$ACCESS_TOKEN" \
+            -var="connection_name=$CONNECTION_NAME" \
+            $(if [ "${{ github.event.inputs.action }}" == "destroy" ]; then echo "-destroy"; fi) \
+            -out=tfplan
 
       - name: Show Plan Summary
         run: |

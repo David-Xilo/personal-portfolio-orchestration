@@ -85,6 +85,7 @@ resource "null_resource" "verify_migration_completion" {
         -e USE_IAM_AUTH="true" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
+        -e CONNECTION_NAME="${var.connection_name}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
 

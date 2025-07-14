@@ -77,3 +77,9 @@ variable "google_access_token" {
   # sensitive   = true
 }
 
+variable "connection_name" {
+  description = "Cloud SQL connection name"
+  type        = string
+  default     = ""
+}
+
