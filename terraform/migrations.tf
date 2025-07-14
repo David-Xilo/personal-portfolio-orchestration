@@ -44,7 +44,7 @@ resource "null_resource" "run_migrations" {
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${google_service_account.db_access.account_id}" \
+        -e DATABASE_USER="${google_sql_user.db_user_iam_short.name}" \
         -e USE_IAM_AUTH="true" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
@@ -82,7 +82,7 @@ resource "null_resource" "verify_migration_completion" {
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${google_service_account.db_access.account_id}" \
+        -e DATABASE_USER="${google_sql_user.db_user_iam_short.name}" \
         -e USE_IAM_AUTH="true" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
