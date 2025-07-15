@@ -27,7 +27,7 @@ resource "null_resource" "run_migrations" {
 
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
-    command = <<-EOT
+    command     = <<-EOT
       echo "Starting database migration with dedicated database service account"
 
       sleep 60
@@ -76,7 +76,7 @@ resource "null_resource" "verify_migration_completion" {
 
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
-    command = <<-EOT
+    command     = <<-EOT
       echo "Verifying migration completion..."
 
       $${DB_ACCESS_TOKEN}=\`gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}"\`
