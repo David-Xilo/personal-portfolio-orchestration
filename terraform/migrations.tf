@@ -41,12 +41,12 @@ resource "null_resource" "run_migrations" {
 
       docker run --rm \
         --user root \
-        -v $HOME/.config/gcloud:/root/.config/gcloud:ro \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_sql_user.migration_access.name}" \
         -e USE_IAM_AUTH="true" \
+        -e GOOGLE_ACCESS_TOKEN="`gcloud auth print-access-token`" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
@@ -80,12 +80,12 @@ resource "null_resource" "verify_migration_completion" {
 
       docker run --rm \
         --user root \
-        -v $HOME/.config/gcloud:/root/.config/gcloud:ro \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_sql_user.migration_access.name}" \
         -e USE_IAM_AUTH="true" \
+        -e GOOGLE_ACCESS_TOKEN="`gcloud auth print-access-token`" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
