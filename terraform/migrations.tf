@@ -26,6 +26,7 @@ resource "null_resource" "run_migrations" {
   ]
 
   provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
     command = <<-EOT
       echo "Starting database migration with dedicated database service account"
 
@@ -74,6 +75,7 @@ resource "null_resource" "verify_migration_completion" {
   depends_on = [null_resource.run_migrations]
 
   provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
     command = <<-EOT
       echo "Verifying migration completion..."
 
