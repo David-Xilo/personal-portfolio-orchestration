@@ -38,7 +38,7 @@ resource "null_resource" "run_migrations" {
 
       docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
 
-      DB_ACCESS_TOKEN=$$(gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}")
+      DB_ACCESS_TOKEN=`gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}"`
 
       docker run --rm \
         --user root \
@@ -77,7 +77,7 @@ resource "null_resource" "verify_migration_completion" {
     command = <<-EOT
       echo "Verifying migration completion..."
 
-      DB_ACCESS_TOKEN=$$(gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}")
+      DB_ACCESS_TOKEN=`gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}"`
 
       docker run --rm \
         --user root \
