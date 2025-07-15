@@ -1,5 +1,5 @@
 
-resource "google_sql_user" "db_user_iam_short" {
+resource "google_sql_user" "migration_access" {
   name     = "db-acc@personal-portfolio-safehouse.iam"
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
@@ -20,7 +20,7 @@ resource "null_resource" "run_migrations" {
   depends_on = [
     google_sql_database_instance.db_instance,
     google_sql_database.safehouse_db,
-    google_sql_user.db_user_iam_short,
+    google_sql_user.migration_access,
     google_service_account.db_access,
     google_service_account_iam_member.cloud_run_impersonate_db_sa
   ]
@@ -39,18 +39,15 @@ resource "null_resource" "run_migrations" {
 
       docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
 
-      TERRAFORM_TOKEN=$$(gcloud auth print-access-token)
-      DB_ACCESS_TOKEN=$$(gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}")
-
       docker run --rm \
         --user root \
+        -v $HOME/.config/gcloud:/root/.config/gcloud:ro \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${google_sql_user.db_user_iam_short.name}" \
+        -e DATABASE_USER="${google_sql_user.migration_access.name}" \
         -e USE_IAM_AUTH="true" \
-        -e GOOGLE_ACCESS_TOKEN="$$(gcloud auth print-access-token)" \
-        -e DB_ACCESS_TOKEN="$$(gcloud auth print-access-token --impersonate-service-account='${google_service_account.db_access.email}')" \
+        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
@@ -66,7 +63,7 @@ resource "null_resource" "run_migrations" {
   triggers = {
     database_connection = google_sql_database_instance.db_instance.connection_name
     database_name       = google_sql_database.safehouse_db.name
-    user_name           = google_sql_user.db_user_iam_short.name
+    user_name           = google_sql_user.migration_access.name
     service_account     = google_service_account.db_access.email
     migration_image     = var.migration_image_tag
     force_rerun         = var.force_migration_rerun
@@ -81,18 +78,15 @@ resource "null_resource" "verify_migration_completion" {
     command     = <<-EOT
       echo "Verifying migration completion..."
 
-      TERRAFORM_TOKEN=$$(gcloud auth print-access-token)
-      DB_ACCESS_TOKEN=$$(gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}")
-
       docker run --rm \
         --user root \
+        -v $HOME/.config/gcloud:/root/.config/gcloud:ro \
         -e PROJECT_ID="${var.project_id}" \
         -e INSTANCE_NAME="safehouse-db-instance" \
         -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${google_sql_user.db_user_iam_short.name}" \
+        -e DATABASE_USER="${google_sql_user.migration_access.name}" \
         -e USE_IAM_AUTH="true" \
-        -e GOOGLE_ACCESS_TOKEN="$$(gcloud auth print-access-token)" \
-        -e DB_ACCESS_TOKEN="$$(gcloud auth print-access-token --impersonate-service-account='${google_service_account.db_access.email}')" \
+        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
