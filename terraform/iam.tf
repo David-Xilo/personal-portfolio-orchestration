@@ -107,6 +107,12 @@ resource "google_service_account_iam_member" "terraform_cicd_use_migration_sa" {
   member             = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
 }
 
+resource "google_service_account_iam_member" "cloud_run_use_migration_sa" {
+  service_account_id = google_service_account.db_access.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${data.google_service_account.cloud_run_sa.email}"
+}
+
 resource "google_project_iam_member" "migration_sa_cloudsql_client" {
   project = var.project_id
   role    = "roles/cloudsql.client"

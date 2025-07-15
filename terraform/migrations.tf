@@ -90,7 +90,7 @@ resource "null_resource" "verify_migration_completion" {
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_sql_user.migration_access.name}" \
         -e USE_IAM_AUTH="true" \
-        -e GOOGLE_ACCESS_TOKEN="\$${DB_ACCESS_TOKEN}" \
+        -e GOOGLE_ACCESS_TOKEN="${data.google_service_account_access_token.db_token.access_token}" \
         -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
