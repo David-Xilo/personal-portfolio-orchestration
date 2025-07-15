@@ -17,19 +17,19 @@ provider "google" {
   region  = var.region
 }
 
-provider "google" {
-  alias                       = "impersonate_db"
-  project                     = var.project_id
-  region                      = var.region
-  impersonate_service_account = google_service_account.db_access.email
-}
+# provider "google" {
+#   alias                       = "impersonate_db"
+#   project                     = var.project_id
+#   region                      = var.region
+#   impersonate_service_account = google_service_account.db_access.email
+# }
 
-data "google_service_account_access_token" "db_token" {
-  provider               = google.impersonate_db
-  target_service_account = google_service_account.db_access.email
-  scopes                 = ["https://www.googleapis.com/auth/cloud-platform"]
-  lifetime               = "3600s"
-}
+# data "google_service_account_access_token" "db_token" {
+#   provider               = google.impersonate_db
+#   target_service_account = google_service_account.db_access.email
+#   scopes                 = ["https://www.googleapis.com/auth/cloud-platform"]
+#   lifetime               = "3600s"
+# }
 
 resource "google_sql_database_instance" "db_instance" {
   name             = "safehouse-db-instance"

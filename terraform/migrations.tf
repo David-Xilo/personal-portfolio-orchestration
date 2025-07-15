@@ -28,34 +28,40 @@ resource "null_resource" "run_migrations" {
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
     command     = <<-EOT
-      echo "Starting database migration with dedicated database service account"
+echo "Starting database migration with dedicated database service account"
+sleep 60
 
-      sleep 60
+# Ensure the migration image exists
+if ! gcloud container images describe gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} \
+    --format="value(name)" >/dev/null 2>&1; then
+  echo "ERROR: Migration image not found!"
+  exit 1
+fi
 
-      if ! gcloud container images describe gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} --format="value(name)" >/dev/null 2>&1; then
-        echo "ERROR: Migration image not found in registry!"
-        exit 1
-      fi
+docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
 
-      docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
+# Generate a fresh access token by impersonating the db_access service account
+export GOOGLE_ACCESS_TOKEN=$(
+  gcloud auth print-access-token \
+    --impersonate-service-account="${google_service_account.db_access.email}"
+)
 
-      $${DB_ACCESS_TOKEN}=`gcloud auth print-access-token`
+# Run migration container with the token
+docker run --rm \
+  --user root \
+  -e PROJECT_ID="${var.project_id}" \
+  -e INSTANCE_NAME="safehouse-db-instance" \
+  -e DATABASE_NAME="safehouse_db" \
+  -e DATABASE_USER="${google_sql_user.migration_access.name}" \
+  -e USE_IAM_AUTH="true" \
+  -e GOOGLE_ACCESS_TOKEN="$GOOGLE_ACCESS_TOKEN" \
+  -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
+  -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
+  --network="host" \
+  gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
 
-      docker run --rm \
-        --user root \
-        -e PROJECT_ID="${var.project_id}" \
-        -e INSTANCE_NAME="safehouse-db-instance" \
-        -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${google_sql_user.migration_access.name}" \
-        -e USE_IAM_AUTH="true" \
-        -e GOOGLE_ACCESS_TOKEN="${data.google_service_account_access_token.db_token.access_token}" \
-        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
-        -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
-        --network="host" \
-        gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
-
-      echo "Database migrations completed with dedicated service account!"
-    EOT
+echo "Database migrations completed!"
+EOT
 
     environment = {
       GOOGLE_CLOUD_PROJECT = var.project_id
@@ -72,35 +78,42 @@ resource "null_resource" "run_migrations" {
   }
 }
 
+
 resource "null_resource" "verify_migration_completion" {
   depends_on = [null_resource.run_migrations]
 
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
     command     = <<-EOT
-      echo "Verifying migration completion..."
+echo "Verifying migration completion..."
+sleep 5
 
+# Generate a fresh IAM access token at runtime
+export GOOGLE_ACCESS_TOKEN=$(
+  gcloud auth print-access-token \
+    --impersonate-service-account="${google_service_account.db_access.email}"
+)
 
-      $${DB_ACCESS_TOKEN}=`gcloud auth print-access-token`
+# Run the migration container with the token, using 'version' command
+docker run --rm \
+  --user root \
+  -e PROJECT_ID="${var.project_id}" \
+  -e INSTANCE_NAME="safehouse-db-instance" \
+  -e DATABASE_NAME="safehouse_db" \
+  -e DATABASE_USER="${google_sql_user.migration_access.name}" \
+  -e USE_IAM_AUTH="true" \
+  -e GOOGLE_ACCESS_TOKEN="$GOOGLE_ACCESS_TOKEN" \
+  -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
+  -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
+  --network="host" \
+  gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
 
-      docker run --rm \
-        --user root \
-        -e PROJECT_ID="${var.project_id}" \
-        -e INSTANCE_NAME="safehouse-db-instance" \
-        -e DATABASE_NAME="safehouse_db" \
-        -e DATABASE_USER="${google_sql_user.migration_access.name}" \
-        -e USE_IAM_AUTH="true" \
-        -e GOOGLE_ACCESS_TOKEN="${data.google_service_account_access_token.db_token.access_token}" \
-        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
-        -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
-        --network="host" \
-        gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version
-
-      echo "Migration verification completed!"
-    EOT
+echo "Migration verification completed!"
+EOT
   }
 
   triggers = {
     migration_run = null_resource.run_migrations.id
   }
 }
+
