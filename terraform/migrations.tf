@@ -38,7 +38,8 @@ resource "null_resource" "run_migrations" {
 
       docker pull gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag}
 
-      # Use the dedicated service account for database access
+      DB_ACCESS_TOKEN=$(gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}")
+
       docker run --rm \
         --user root \
         -e PROJECT_ID="${var.project_id}" \
@@ -46,8 +47,7 @@ resource "null_resource" "run_migrations" {
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_sql_user.db_user_iam_short.name}" \
         -e USE_IAM_AUTH="true" \
-        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
-        -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
+        -e GOOGLE_ACCESS_TOKEN="$DB_ACCESS_TOKEN" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} up
@@ -77,6 +77,8 @@ resource "null_resource" "verify_migration_completion" {
     command = <<-EOT
       echo "Verifying migration completion..."
 
+      DB_ACCESS_TOKEN=$(gcloud auth print-access-token --impersonate-service-account="${google_service_account.db_access.email}")
+
       docker run --rm \
         --user root \
         -e PROJECT_ID="${var.project_id}" \
@@ -84,8 +86,7 @@ resource "null_resource" "verify_migration_completion" {
         -e DATABASE_NAME="safehouse_db" \
         -e DATABASE_USER="${google_sql_user.db_user_iam_short.name}" \
         -e USE_IAM_AUTH="true" \
-        -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
-        -e GOOGLE_ACCESS_TOKEN="${var.google_access_token}" \
+        -e GOOGLE_ACCESS_TOKEN="$DB_ACCESS_TOKEN" \
         -e CONNECTION_NAME="${google_sql_database_instance.db_instance.connection_name}" \
         --network="host" \
         gcr.io/${var.project_id}/safehouse-migrations:${var.migration_image_tag} version

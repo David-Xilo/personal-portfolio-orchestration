@@ -88,3 +88,9 @@ resource "google_service_account_iam_member" "cloud_run_impersonate_db_sa" {
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "serviceAccount:${data.google_service_account.cloud_run_sa.email}"
 }
+
+resource "google_service_account_iam_member" "terraform_cicd_impersonate_db_sa" {
+  service_account_id = google_service_account.db_access.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
+}
