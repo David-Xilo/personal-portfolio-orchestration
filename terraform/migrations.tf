@@ -1,6 +1,6 @@
-
+# Fixed migrations.tf
 resource "google_sql_user" "migration_access" {
-  name     = "db-acc@personal-portfolio-safehouse.iam"
+  name     = google_service_account.db_access.email
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
@@ -22,7 +22,7 @@ resource "null_resource" "run_migrations" {
     google_sql_database.safehouse_db,
     google_sql_user.migration_access,
     google_service_account.db_access,
-    google_service_account_iam_member.cloud_run_impersonate_db_sa
+    google_service_account_iam_member.terraform_cicd_impersonate_db_sa
   ]
 
   provisioner "local-exec" {
@@ -52,7 +52,7 @@ docker run --rm \
   -e PROJECT_ID="${var.project_id}" \
   -e INSTANCE_NAME="safehouse-db-instance" \
   -e DATABASE_NAME="safehouse_db" \
-  -e DATABASE_USER="${google_sql_user.migration_access.name}" \
+  -e DATABASE_USER="${google_service_account.db_access.email}" \
   -e USE_IAM_AUTH="true" \
   -e GOOGLE_ACCESS_TOKEN="$GOOGLE_ACCESS_TOKEN" \
   -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
@@ -71,13 +71,12 @@ EOT
   triggers = {
     database_connection = google_sql_database_instance.db_instance.connection_name
     database_name       = google_sql_database.safehouse_db.name
-    user_name           = google_sql_user.migration_access.name
+    user_name           = google_service_account.db_access.email
     service_account     = google_service_account.db_access.email
     migration_image     = var.migration_image_tag
     force_rerun         = var.force_migration_rerun
   }
 }
-
 
 resource "null_resource" "verify_migration_completion" {
   depends_on = [null_resource.run_migrations]
@@ -100,7 +99,7 @@ docker run --rm \
   -e PROJECT_ID="${var.project_id}" \
   -e INSTANCE_NAME="safehouse-db-instance" \
   -e DATABASE_NAME="safehouse_db" \
-  -e DATABASE_USER="${google_sql_user.migration_access.name}" \
+  -e DATABASE_USER="${google_service_account.db_access.email}" \
   -e USE_IAM_AUTH="true" \
   -e GOOGLE_ACCESS_TOKEN="$GOOGLE_ACCESS_TOKEN" \
   -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \

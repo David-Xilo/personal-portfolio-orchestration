@@ -124,3 +124,39 @@ resource "google_project_iam_member" "migration_sa_instance_user" {
   role    = "roles/cloudsql.instanceUser"
   member  = "serviceAccount:${google_service_account.db_access.email}"
 }
+
+# Ensure the CICD service account can generate access tokens for the db_access service account
+resource "google_service_account_iam_member" "terraform_cicd_impersonate_db_sa_token" {
+  service_account_id = google_service_account.db_access.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
+}
+
+# Additional role for service account impersonation (if not already present)
+resource "google_service_account_iam_member" "terraform_cicd_impersonate_db_sa_actor" {
+  service_account_id = google_service_account.db_access.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
+}
+
+# Grant the db_access service account the Cloud SQL Editor role for database operations
+resource "google_project_iam_member" "db_sa_cloudsql_editor" {
+  project = var.project_id
+  role    = "roles/cloudsql.editor"
+  member  = "serviceAccount:${google_service_account.db_access.email}"
+}
+
+# Ensure db_access service account can authenticate to Cloud SQL instances
+resource "google_project_iam_member" "db_sa_cloudsql_instance_user" {
+  project = var.project_id
+  role    = "roles/cloudsql.instanceUser"
+  member  = "serviceAccount:${google_service_account.db_access.email}"
+}
+
+# Add IAM database authentication role
+resource "google_project_iam_member" "db_sa_iam_auth" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.db_access.email}"
+}
+
