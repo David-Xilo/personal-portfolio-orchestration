@@ -33,7 +33,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
   template {
     metadata {
       annotations = {
-        "autoscaling.knative.dev/maxScale"        = "1"
+        "autoscaling.knative.dev/maxScale" = "1"
       }
     }
 
@@ -50,7 +50,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DB_HOST"
-          value = google_cloud_run_service.postgres.status[0].url
+          value = google_cloud_run_service.postgres_db.status[0].url
         }
 
         env {
@@ -60,17 +60,17 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DB_NAME"
-          value = google_cloud_run_service.postgres.status[0].name
+          value = "safehouse_db"
         }
 
         env {
           name  = "DB_USER"
-          value = "postgres"
+          value = "safehouse_user"
         }
 
         env {
           name  = "DB_PASSWORD"
-          value = "password"
+          value = data.google_secret_manager_secret_version.db_password.secret_data
         }
 
         # env {
@@ -160,7 +160,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
   depends_on = [
     google_project_service.cloud_run_api,
-    google_cloud_run_service.postgres,
+    google_cloud_run_service.postgres_db,
     google_cloud_run_v2_job.migrations
   ]
 
@@ -199,8 +199,8 @@ resource "google_cloud_run_service" "safehouse_frontend" {
   depends_on = [google_project_service.cloud_run_api]
 }
 
-resource "google_cloud_run_service" "postgres" {
-  name = "postgres-db"
+resource "google_cloud_run_service" "postgres_db" {
+  name     = "postgres-db"
   location = var.region
 
   template {
@@ -208,20 +208,28 @@ resource "google_cloud_run_service" "postgres" {
       containers {
         image = "xilo/safehouse-postgres:${var.postgres_image_tag}"
         env {
-          name = "POSTGRES_DB"
+          name  = "POSTGRES_DB"
           value = "safehouse_db"
         }
-        volume_mounts {
-          name = "postgres-data"
-          mount_path = "/var/lib/postgresql/data"
+        env {
+          name  = "POSTGRES_USER"
+          value = "safehouse_user"
         }
-      }
-      volumes {
-        name = "postgres-data"
-        # Use persistent disk
+        env {
+          name  = "POSTGRES_PASSWORD"
+          value = data.google_secret_manager_secret_version.db_password.secret_data
+        }
       }
     }
   }
+}
+
+resource "google_cloud_run_service_iam_member" "postgres_public_access" {
+  location = google_cloud_run_service.postgres_db.location
+  project  = google_cloud_run_service.postgres_db.project
+  service  = google_cloud_run_service.postgres_db.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }
 
 resource "google_cloud_run_v2_job" "migrations" {
@@ -233,8 +241,20 @@ resource "google_cloud_run_v2_job" "migrations" {
       containers {
         image = "xilo/safehouse-migrations:${var.migration_image_tag}"
         env {
-          name  = "DATABASE_URL"
-          value = "postgres://user:pass@postgres-service/safehouse_db"
+          name  = "POSTGRES_HOST"
+          value = google_cloud_run_service.postgres_db.status[0].url
+        }
+        env {
+          name  = "POSTGRES_USER"
+          value = "safehouse_user"
+        }
+        env {
+          name  = "POSTGRES_PASSWORD"
+          value = data.google_secret_manager_secret_version.db_password.secret_data
+        }
+        env {
+          name  = "POSTGRES_DB"
+          value = "safehouse_db"
         }
       }
     }

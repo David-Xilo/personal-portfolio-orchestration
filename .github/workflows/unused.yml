@@ -13,13 +13,10 @@ on:
           - apply
           - destroy
       confirm_apply:
-        description: 'Choose "yes" to confirm apply/destroy'
+        description: 'Type "yes" to confirm apply/destroy'
         required: false
         default: 'no'
-        type: choice
-        options:
-          - no
-          - yes
+        type: string
       migration_image_tag:
         description: 'Migration image tag to use (e.g., latest, v1.0.0, commit-sha)'
         required: true
@@ -32,11 +29,6 @@ on:
         type: string
       frontend_image_tag:
         description: 'Frontend image tag to use (e.g., latest, v1.0.0, commit-sha)'
-        required: false
-        default: 'latest'
-        type: string
-      postgres_image_tag:
-        description: 'Postgres image tag to use (e.g., latest, v1.0.0, commit-sha)'
         required: false
         default: 'latest'
         type: string
@@ -89,21 +81,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: validate
     if: github.event.inputs.action == 'apply'
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: '${{ env.SERVICE_ACCOUNT_EMAIL }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Check Migration Image Exists
         run: |
           echo "Checking for migration image..."
           MIGRATION_TAG="${{ github.event.inputs.migration_image_tag }}"
-          MIGRATION_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-migrations:${MIGRATION_TAG}"
+          MIGRATION_IMAGE="gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${MIGRATION_TAG}"
           
-          if docker manifest inspect $MIGRATION_IMAGE >/dev/null 2>&1; then
+          if gcloud container images describe $MIGRATION_IMAGE --format="value(name)" >/dev/null 2>&1; then
             echo "Migration image found: $MIGRATION_IMAGE"
           else
             echo "ERROR: Migration image not found!"
@@ -111,42 +109,31 @@ jobs:
             exit 1
           fi
 
-      - name: Check Backend Image Exists
+      - name: Check Backend Image Exists (if specified)
+        if: github.event.inputs.backend_image_tag != 'latest'
         run: |
           echo "Checking for backend image..."
           BACKEND_TAG="${{ github.event.inputs.backend_image_tag }}"
-          BACKEND_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-backend-main:${BACKEND_TAG}"
+          BACKEND_IMAGE="gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${BACKEND_TAG}"
           
-          if docker manifest inspect $BACKEND_IMAGE >/dev/null 2>&1; then
+          if gcloud container images describe $BACKEND_IMAGE --format="value(name)" >/dev/null 2>&1; then
             echo "Backend image found: $BACKEND_IMAGE"
           else
             echo "WARNING: Backend image not found: $BACKEND_IMAGE"
             echo "Will attempt to use existing image in Terraform"
           fi
 
-      - name: Check Frontend Image Exists
+      - name: Check Frontend Image Exists (if specified)
+        if: github.event.inputs.frontend_image_tag != 'latest'
         run: |
           echo "Checking for frontend image..."
           FRONTEND_TAG="${{ github.event.inputs.frontend_image_tag }}"
-          FRONTEND_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-frontend-main:${FRONTEND_TAG}"
+          FRONTEND_IMAGE="gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${FRONTEND_TAG}"
           
-          if docker manifest inspect $FRONTEND_IMAGE >/dev/null 2>&1; then
+          if gcloud container images describe $FRONTEND_IMAGE --format="value(name)" >/dev/null 2>&1; then
             echo "Frontend image found: $FRONTEND_IMAGE"
           else
             echo "WARNING: Frontend image not found: $FRONTEND_IMAGE"
-            echo "Will attempt to use existing image in Terraform"
-          fi
-
-      - name: Check Postgres Image Exists
-        run: |
-          echo "Checking for postgres image..."
-          POSTGRES_TAG="${{ github.event.inputs.postgres_image_tag }}"
-          POSTGRES_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-postgres:${POSTGRES_TAG}"
-          
-          if docker manifest inspect $POSTGRES_IMAGE >/dev/null 2>&1; then
-            echo "Postgres image found: $POSTGRES_IMAGE"
-          else
-            echo "WARNING: Postgres image not found: $POSTGRES_IMAGE"
             echo "Will attempt to use existing image in Terraform"
           fi
 
@@ -182,12 +169,16 @@ jobs:
       - name: Terraform Plan
         run: |
           cd terraform
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          CONNECTION_NAME=$(gcloud sql instances describe safehouse-db-instance --project=personal-portfolio-safehouse --format="value(connectionName)")
+
           terraform plan \
             -var-file="terraform.tfvars" \
             -var="migration_image_tag=${{ github.event.inputs.migration_image_tag }}" \
             -var="backend_image_tag=${{ github.event.inputs.backend_image_tag }}" \
             -var="frontend_image_tag=${{ github.event.inputs.frontend_image_tag }}" \
-            -var="postgres_image_tag=${{ github.event.inputs.postgres_image_tag }}" \
+            -var="google_access_token=$ACCESS_TOKEN" \
+            -var="connection_name=$CONNECTION_NAME" \
             $(if [ "${{ github.event.inputs.action }}" == "destroy" ]; then echo "-destroy"; fi) \
             -out=tfplan
 
@@ -202,12 +193,11 @@ jobs:
           echo "**Commit:** ${{ github.sha }}"
           echo ""
           echo "**Image Configuration:**"
-          echo "- **Migration Image:** \`${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}\`"
-          echo "- **Backend Image:** \`${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}\`"
-          echo "- **Frontend Image:** \`${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}\`"
-          echo "- **Postgres Image:** \`${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-postgres:${{ github.event.inputs.postgres_image_tag }}\`"
+          echo "- **Migration Image:** \`gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}\`"
+          echo "- **Backend Image:** \`gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}\`"
+          echo "- **Frontend Image:** \`gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}\`"
           echo ""
-          echo "**Architecture:** Containerized PostgreSQL on Cloud Run"
+          echo "**Migration Handling:** Automatic (via Terraform)"
           echo ""
           echo "### Plan Output:"
           terraform show -no-color tfplan
@@ -256,6 +246,10 @@ jobs:
           cd terraform
           terraform init
 
+      - name: Configure Docker for Image Pull
+        run: |
+          gcloud auth configure-docker
+
       - name: Terraform Apply
         run: |
           cd terraform
@@ -296,16 +290,16 @@ jobs:
             "workflow_run": "${{ github.run_number }}",
             "project_id": "${{ env.PROJECT_ID }}",
             "images": {
-              "migration": "${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}",
-              "backend": "${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}",
-              "frontend": "${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}",
-              "postgres": "${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-postgres:${{ github.event.inputs.postgres_image_tag }}"
+              "migration": "gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}",
+              "backend": "gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}",
+              "frontend": "gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
             },
-            "deployment_method": "terraform_with_containerized_postgres",
+            "deployment_method": "terraform_with_specified_images",
             "infrastructure_components": {
               "cloud_run": "deployed",
-              "containerized_postgres": "deployed", 
+              "cloud_sql": "deployed", 
               "migrations": "applied",
+              "vpc_network": "deployed",
               "secrets": "deployed"
             }
           }
@@ -327,17 +321,16 @@ jobs:
             echo "=================================="
             echo ""
             echo "Infrastructure Status:"
-            echo "   • Database: Containerized PostgreSQL deployed"
+            echo "   • Database: Deployed and migrated"
             echo "   • Backend Service: Deployed"
             echo "   • Frontend Service: Deployed"
-            echo "   • Migrations: Applied via Cloud Run Jobs"
-            echo "   • Secrets: Configured"
+            echo "   • VPC & Networking: Configured"
+            echo "   • Security & Secrets: Configured"
             echo ""
             echo "Image Configuration:"
-            echo "   • Migration: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
-            echo "   • Backend: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
-            echo "   • Frontend: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
-            echo "   • Postgres: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-postgres:${{ github.event.inputs.postgres_image_tag }}"
+            echo "   • Migration: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
+            echo "   • Backend: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
+            echo "   • Frontend: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
             echo ""
             echo "Orchestrated by: @${{ github.actor }}"
             echo "Commit: ${{ github.sha }}"
@@ -352,10 +345,9 @@ jobs:
           echo "Orchestrated by: @${{ github.actor }}"
           echo ""
           echo "Image Configuration Used:"
-          echo "   • Migration: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
-          echo "   • Backend: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
-          echo "   • Frontend: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
-          echo "   • Postgres: ${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-postgres:${{ github.event.inputs.postgres_image_tag }}"
+          echo "   • Migration: gcr.io/${{ env.PROJECT_ID }}/safehouse-migrations:${{ github.event.inputs.migration_image_tag }}"
+          echo "   • Backend: gcr.io/${{ env.PROJECT_ID }}/safehouse-backend-main:${{ github.event.inputs.backend_image_tag }}"
+          echo "   • Frontend: gcr.io/${{ env.PROJECT_ID }}/safehouse-frontend-main:${{ github.event.inputs.frontend_image_tag }}"
           exit 1
 
   safety_check:
@@ -382,9 +374,10 @@ jobs:
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo ""
             echo "DESTROY will remove ALL production resources:"
-            echo "   - All containerized databases and stored data"
+            echo "   - All databases and stored data"
             echo "   - All running services and applications"
-            echo "   - All secrets and configurations"
+            echo "   - All network configurations"
+            echo "   - All storage and backup data"
           fi
           
           exit 1
