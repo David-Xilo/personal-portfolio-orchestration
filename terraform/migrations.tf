@@ -1,6 +1,6 @@
 # Fixed migrations.tf
 resource "google_sql_user" "migration_access" {
-  name     = google_service_account.db_access.email
+  name     = "db-acc@personal-portfolio-safehouse.iam"
   instance = google_sql_database_instance.db_instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 
@@ -52,7 +52,7 @@ docker run --rm \
   -e PROJECT_ID="${var.project_id}" \
   -e INSTANCE_NAME="safehouse-db-instance" \
   -e DATABASE_NAME="safehouse_db" \
-  -e DATABASE_USER="${google_service_account.db_access.email}" \
+  -e DATABASE_USER="${google_sql_user.migration_access.name}" \
   -e USE_IAM_AUTH="true" \
   -e GOOGLE_ACCESS_TOKEN="$GOOGLE_ACCESS_TOKEN" \
   -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
@@ -99,7 +99,7 @@ docker run --rm \
   -e PROJECT_ID="${var.project_id}" \
   -e INSTANCE_NAME="safehouse-db-instance" \
   -e DATABASE_NAME="safehouse_db" \
-  -e DATABASE_USER="${google_service_account.db_access.email}" \
+  -e DATABASE_USER="${google_sql_user.migration_access.name}" \
   -e USE_IAM_AUTH="true" \
   -e GOOGLE_ACCESS_TOKEN="$GOOGLE_ACCESS_TOKEN" \
   -e DB_SERVICE_ACCOUNT="${google_service_account.db_access.email}" \
