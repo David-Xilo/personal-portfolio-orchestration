@@ -60,16 +60,16 @@ resource "google_service_account_iam_member" "github_workload_identity" {
   member             = "principalSet://iam.googleapis.com/projects/${data.google_project.project.number}/locations/global/workloadIdentityPools/safehouse-github-pool/attribute.repository/${var.github_user}/${each.value}"
 }
 
-resource "google_sql_user" "db_user_iam" {
-  name     = "safehouse-cloud-run@${var.project_id}.iam" # Fixed naming
-  instance = google_sql_database_instance.db_instance.name
-  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
-
-  depends_on = [
-    data.google_service_account.cloud_run_sa,
-    google_sql_database_instance.db_instance
-  ]
-}
+# resource "google_sql_user" "db_user_iam" {
+#   name     = "safehouse-cloud-run@${var.project_id}.iam" # Fixed naming
+#   instance = google_sql_database_instance.db_instance.name
+#   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+#
+#   depends_on = [
+#     data.google_service_account.cloud_run_sa,
+#     google_sql_database_instance.db_instance
+#   ]
+# }
 
 resource "google_project_iam_member" "db_sa_cloudsql_client" {
   project = var.project_id

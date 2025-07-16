@@ -23,11 +23,11 @@ resource "google_project_service" "cloud_resource_manager_api" {
   disable_on_destroy         = false
 }
 
-resource "google_project_service" "container_registry_api" {
-  service                    = "containerregistry.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
+# resource "google_project_service" "container_registry_api" {
+#   service                    = "containerregistry.googleapis.com"
+#   disable_dependent_services = true
+#   disable_on_destroy         = false
+# }
 
 resource "google_project_service" "secret_manager_api" {
   service                    = "secretmanager.googleapis.com"

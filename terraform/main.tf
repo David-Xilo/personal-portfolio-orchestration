@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = "~> 4.0"
+      version = "~> 5.0"
     }
   }
 
@@ -24,74 +24,7 @@ provider "google" {
 #   impersonate_service_account = google_service_account.db_access.email
 # }
 
-# data "google_service_account_access_token" "db_token" {
-#   provider               = google.impersonate_db
-#   target_service_account = google_service_account.db_access.email
-#   scopes                 = ["https://www.googleapis.com/auth/cloud-platform"]
-#   lifetime               = "3600s"
-# }
 
-resource "google_sql_database_instance" "db_instance" {
-  name             = "safehouse-db-instance"
-  database_version = "POSTGRES_13"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-
-    # no need for backup for now
-    backup_configuration {
-      enabled = false
-    }
-
-    ip_configuration {
-      ipv4_enabled    = false
-      private_network = google_compute_network.vpc.id
-      require_ssl     = true
-    }
-
-    database_flags {
-      name  = "cloudsql.iam_authentication"
-      value = "on"
-    }
-
-    database_flags {
-      name  = "log_connections"
-      value = "on"
-    }
-
-    database_flags {
-      name  = "log_disconnections"
-      value = "on"
-    }
-  }
-
-  depends_on = [
-    google_project_service.cloud_sql_api,
-    google_service_networking_connection.private_vpc_connection
-  ]
-}
-
-# Create database
-resource "google_sql_database" "safehouse_db" {
-  name     = "safehouse_db"
-  instance = google_sql_database_instance.db_instance.name
-}
-
-resource "time_rotating" "pw_trigger" {
-  rotation_minutes = 1440 # 24h
-}
-
-resource "google_sql_user" "db_user" {
-  name     = "safehouse_db_user"
-  instance = google_sql_database_instance.db_instance.name
-  password = data.google_secret_manager_secret_version.db_password.secret_data
-
-  lifecycle {
-    ignore_changes       = [password]
-    replace_triggered_by = [time_rotating.pw_trigger.id]
-  }
-}
 
 resource "google_cloud_run_service" "safehouse_backend" {
   name     = "safehouse-backend"
@@ -100,8 +33,6 @@ resource "google_cloud_run_service" "safehouse_backend" {
   template {
     metadata {
       annotations = {
-        "run.googleapis.com/vpc-access-connector" = google_vpc_access_connector.connector.name
-        "run.googleapis.com/cloudsql-instances"   = google_sql_database_instance.db_instance.connection_name
         "autoscaling.knative.dev/maxScale"        = "1"
       }
     }
@@ -110,7 +41,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
       service_account_name = data.google_service_account.cloud_run_sa.email
 
       containers {
-        image = "gcr.io/${var.project_id}/safehouse-backend-main:${var.backend_image_tag}"
+        image = "xilo/safehouse-backend-main:${var.backend_image_tag}"
 
         env {
           name  = "ENV"
@@ -119,7 +50,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DB_HOST"
-          value = "/cloudsql/${google_sql_database_instance.db_instance.connection_name}"
+          value = google_cloud_run_service.postgres.status[0].url
         }
 
         env {
@@ -129,12 +60,17 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "DB_NAME"
-          value = google_sql_database.safehouse_db.name
+          value = google_cloud_run_service.postgres.status[0].name
         }
 
         env {
           name  = "DB_USER"
-          value = google_sql_user.db_user.name
+          value = "postgres"
+        }
+
+        env {
+          name  = "DB_PASSWORD"
+          value = "password"
         }
 
         # env {
@@ -180,7 +116,7 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
         env {
           name  = "FRONTEND_URL"
-          value = "https://safehouse-frontend-942519139037.us-central1.run.app"
+          value = google_cloud_run_service.safehouse_frontend.status[0].url
         }
 
         env {
@@ -224,10 +160,8 @@ resource "google_cloud_run_service" "safehouse_backend" {
 
   depends_on = [
     google_project_service.cloud_run_api,
-    google_sql_database_instance.db_instance,
-    google_vpc_access_connector.connector,
-    null_resource.run_migrations,
-    data.external.migration_status
+    google_cloud_run_service.postgres,
+    google_cloud_run_v2_job.migrations
   ]
 
   traffic {
@@ -243,7 +177,7 @@ resource "google_cloud_run_service" "safehouse_frontend" {
   template {
     spec {
       containers {
-        image = "gcr.io/${var.project_id}/safehouse-frontend-main:${var.frontend_image_tag}"
+        image = "xilo/safehouse-frontend-main:${var.frontend_image_tag}"
 
         ports {
           container_port = 80
@@ -264,6 +198,49 @@ resource "google_cloud_run_service" "safehouse_frontend" {
 
   depends_on = [google_project_service.cloud_run_api]
 }
+
+resource "google_cloud_run_service" "postgres" {
+  name = "postgres-db"
+  location = var.region
+
+  template {
+    spec {
+      containers {
+        image = "xilo/safehouse-postgres:${var.postgres_image_tag}"
+        env {
+          name = "POSTGRES_DB"
+          value = "safehouse_db"
+        }
+        volume_mounts {
+          name = "postgres-data"
+          mount_path = "/var/lib/postgresql/data"
+        }
+      }
+      volumes {
+        name = "postgres-data"
+        # Use persistent disk
+      }
+    }
+  }
+}
+
+resource "google_cloud_run_v2_job" "migrations" {
+  name     = "run-migrations"
+  location = var.region
+
+  template {
+    template {
+      containers {
+        image = "xilo/safehouse-migrations:${var.migration_image_tag}"
+        env {
+          name  = "DATABASE_URL"
+          value = "postgres://user:pass@postgres-service/safehouse_db"
+        }
+      }
+    }
+  }
+}
+
 
 resource "google_cloud_run_service_iam_member" "authenticated_access" {
   location = google_cloud_run_service.safehouse_backend.location

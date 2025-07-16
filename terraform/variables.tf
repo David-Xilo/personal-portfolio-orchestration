@@ -70,6 +70,12 @@ variable "frontend_image_tag" {
   default     = "0.0.1"
 }
 
+variable "postgres_image_tag" {
+  description = "Tag for the postgres Docker image"
+  type        = string
+  default     = "0.0.1"
+}
+
 variable "google_access_token" {
   description = "Google Cloud access token for containers"
   type        = string
