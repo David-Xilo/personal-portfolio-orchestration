@@ -95,6 +95,12 @@ resource "google_service_account_iam_member" "terraform_cicd_impersonate_db_sa" 
   member             = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
 }
 
+resource "google_service_account_iam_member" "terraform_cicd_use_db_sa" {
+  service_account_id = google_service_account.db_access.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${data.google_service_account.terraform_cicd.email}"
+}
+
 resource "google_project_iam_member" "db_sa_cloudsql_viewer" {
   project = var.project_id
   role    = "roles/cloudsql.viewer"
@@ -157,6 +163,12 @@ resource "google_project_iam_member" "db_sa_cloudsql_instance_user" {
 resource "google_project_iam_member" "db_sa_iam_auth" {
   project = var.project_id
   role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.db_access.email}"
+}
+
+resource "google_project_iam_member" "db_sa_editor" {
+  project = var.project_id
+  role    = "roles/cloudsql.editor"
   member  = "serviceAccount:${google_service_account.db_access.email}"
 }
 
