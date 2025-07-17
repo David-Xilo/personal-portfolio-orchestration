@@ -47,11 +47,11 @@ resource "google_project_service" "servicenetworking_api" {
   disable_on_destroy         = false
 }
 
-resource "google_project_service" "vpcaccess_api" {
-  service                    = "vpcaccess.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
+# resource "google_project_service" "vpcaccess_api" {
+#   service                    = "vpcaccess.googleapis.com"
+#   disable_dependent_services = true
+#   disable_on_destroy         = false
+# }
 
 resource "google_project_service" "iam_credentials_api" {
   service                    = "iamcredentials.googleapis.com"
