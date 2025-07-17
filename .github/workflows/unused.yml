@@ -1,4 +1,4 @@
-name: Infrastructure Deployment
+name: unused
 
 on:
   workflow_dispatch:
