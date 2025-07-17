@@ -23,11 +23,11 @@ resource "google_project_service" "cloud_resource_manager_api" {
   disable_on_destroy         = false
 }
 
-resource "google_project_service" "container_registry_api" {
-  service                    = "containerregistry.googleapis.com"
-  disable_dependent_services = true
-  disable_on_destroy         = false
-}
+# resource "google_project_service" "container_registry_api" {
+#   service                    = "containerregistry.googleapis.com"
+#   disable_dependent_services = true
+#   disable_on_destroy         = false
+# }
 
 resource "google_project_service" "secret_manager_api" {
   service                    = "secretmanager.googleapis.com"
@@ -47,14 +47,20 @@ resource "google_project_service" "servicenetworking_api" {
   disable_on_destroy         = false
 }
 
-resource "google_project_service" "vpcaccess_api" {
-  service                    = "vpcaccess.googleapis.com"
+# resource "google_project_service" "vpcaccess_api" {
+#   service                    = "vpcaccess.googleapis.com"
+#   disable_dependent_services = true
+#   disable_on_destroy         = false
+# }
+
+resource "google_project_service" "iam_credentials_api" {
+  service                    = "iamcredentials.googleapis.com"
   disable_dependent_services = true
   disable_on_destroy         = false
 }
 
-resource "google_project_service" "iam_credentials_api" {
-  service                    = "iamcredentials.googleapis.com"
+resource "google_project_service" "cloudbuild_api" {
+  service                    = "cloudbuild.googleapis.com"
   disable_dependent_services = true
   disable_on_destroy         = false
 }

@@ -1,12 +1,6 @@
 
 
-
 resource "random_password" "db_password" {
-  length  = 32
-  special = true
-}
-
-resource "random_password" "jwt_secret" {
   length  = 32
   special = true
 }
@@ -25,6 +19,16 @@ resource "google_secret_manager_secret" "db_password" {
   depends_on = [google_project_service.secret_manager_api]
 }
 
+resource "google_secret_manager_secret_version" "db_password" {
+  secret      = google_secret_manager_secret.db_password.id
+  secret_data = random_password.db_password.result
+}
+
+resource "random_password" "jwt_secret" {
+  length  = 32
+  special = true
+}
+
 resource "google_secret_manager_secret" "jwt_signing_key" {
   secret_id = "safehouse-jwt-signing-key"
 
@@ -37,12 +41,6 @@ resource "google_secret_manager_secret" "jwt_signing_key" {
   }
 
   depends_on = [google_project_service.secret_manager_api]
-}
-
-# Create secret versions with generated passwords
-resource "google_secret_manager_secret_version" "db_password" {
-  secret      = google_secret_manager_secret.db_password.id
-  secret_data = random_password.db_password.result
 }
 
 resource "google_secret_manager_secret_version" "jwt_signing_key" {

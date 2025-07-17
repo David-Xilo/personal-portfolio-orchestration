@@ -11,7 +11,7 @@ PROJECT_ID="personal-portfolio-safehouse"
 PROJECT_NUMBER="942519139037"
 GITHUB_USER="David-Xilo"
 TERRAFORM_SA="safehouse-terraform-cicd"
-CLOUD_RUN_SA="safehouse-cloud-run"
+CLOUD_RUN_SA="crun-sa"
 WI_POOL_ID="safehouse-github-pool"
 WI_PROVIDER_ID="safehouse-github-provider"
 

@@ -6,3 +6,8 @@ frontend_github_repository      = "safehouse-main-front"
 migrations_github_repository    = "safehouse-db-schema"
 orchestration_github_repository = "safehouse-orchestration"
 github_user                     = "David-Xilo"
+
+migration_image_tag = "latest"
+backend_image_tag   = "latest"
+frontend_image_tag  = "latest"
+postgres_image_tag  = "latest"
