@@ -15,11 +15,11 @@ on:
       confirm_apply:
         description: 'Choose "yes" to confirm apply/destroy'
         required: true
-        default: 'no'
+        default: 'false'
         type: choice
         options:
-          - no
-          - yes
+          - "false"
+          - "true"
       migration_image_tag:
         description: 'Migration image tag to use (e.g., latest, v1.0.0, commit-sha)'
         required: true
