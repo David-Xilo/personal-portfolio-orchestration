@@ -13,7 +13,7 @@ on:
           - apply
           - destroy
       confirm_apply:
-        description: 'Choose "yes" to confirm apply/destroy'
+        description: 'Choose "true" to confirm apply/destroy'
         required: true
         default: 'false'
         type: choice
