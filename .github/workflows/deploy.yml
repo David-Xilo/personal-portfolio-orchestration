@@ -14,7 +14,7 @@ on:
           - destroy
       confirm_apply:
         description: 'Choose "yes" to confirm apply/destroy'
-        required: false
+        required: true
         default: 'no'
         type: choice
         options:
