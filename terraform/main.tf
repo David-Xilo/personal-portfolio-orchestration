@@ -207,6 +207,11 @@ resource "google_cloud_run_service" "postgres_db" {
     spec {
       containers {
         image = "xilo/safehouse-postgres:${var.postgres_image_tag}"
+
+        ports {
+          container_port = 5432
+        }
+
         env {
           name  = "POSTGRES_DB"
           value = "safehouse_db"
