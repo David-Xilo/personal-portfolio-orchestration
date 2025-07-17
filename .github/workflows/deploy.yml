@@ -224,7 +224,7 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: [plan, check_images]
-    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply == 'yes'
+    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply == 'true'
     environment: production
     permissions:
       contents: read
@@ -361,7 +361,7 @@ jobs:
   safety_check:
     name: Safety Check
     runs-on: ubuntu-latest
-    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply != 'yes'
+    if: (github.event.inputs.action == 'apply' || github.event.inputs.action == 'destroy') && github.event.inputs.confirm_apply != 'true'
 
     steps:
       - name: Safety Warning
@@ -369,11 +369,11 @@ jobs:
           echo "PRODUCTION SAFETY CHECK FAILED"
           echo "=================================="
           echo ""
-          echo "You selected '${{ github.event.inputs.action }}' but didn't confirm with 'yes'"
+          echo "You selected '${{ github.event.inputs.action }}' but didn't confirm with 'true'"
           echo ""
           echo "To ${{ github.event.inputs.action }} PRODUCTION infrastructure:"
           echo "1. Set 'Action' to '${{ github.event.inputs.action }}'"
-          echo "2. Set 'Type yes to confirm' to 'yes'"
+          echo "2. Set 'Type true to confirm' to 'true'"
           echo "3. Run the workflow again"
           echo ""
           echo "This prevents accidental production changes!"
