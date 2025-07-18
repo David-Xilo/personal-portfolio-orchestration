@@ -1,4 +1,4 @@
-name: Infrastructure Deployment
+name: Gcloud Deployment Simplified (unused)
 
 on:
   workflow_dispatch:
