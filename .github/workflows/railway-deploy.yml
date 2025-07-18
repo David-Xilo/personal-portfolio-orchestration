@@ -74,7 +74,9 @@ jobs:
       - name: Setup Railway infrastructure
         run: |
           export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
+
+          # Link to project (FIXED)
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}"
 
           echo "🐘 Ensuring PostgreSQL service exists..."
           if ! railway service list | grep -q "postgres"; then
@@ -111,16 +113,16 @@ jobs:
           echo "🚀 Starting database migration with version: ${{ inputs.migration_version }}"
           echo "Service name: ${SERVICE_NAME}"
 
-          # Create temporary migration service
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          railway service create ${SERVICE_NAME}
-          railway link --service ${SERVICE_NAME}
+          # Link to project
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}"
 
-          # Deploy migration image
-          railway up --image "xilo/safehouse-db-schema:${{ inputs.migration_version }}" --detach
+          # Deploy migration image (this creates the service automatically)
+          railway up --service ${SERVICE_NAME} --image "xilo/safehouse-db-schema:${{ inputs.migration_version }}" --detach
 
-          # Connect to database
-          railway variables copy --service postgres DATABASE_URL
+          # Set environment variables
+          railway variables copy --service postgres --service ${SERVICE_NAME} DATABASE_URL
+          railway variables set --service ${SERVICE_NAME} MIGRATION_TIMEOUT=300
+          railway variables set --service ${SERVICE_NAME} MIGRATION_VERBOSE=true
 
           # Monitor migration progress
           echo "📋 Monitoring migration progress..."
@@ -128,14 +130,14 @@ jobs:
           COUNTER=0
 
           while [ $COUNTER -lt $TIMEOUT ]; do
-            if railway logs | grep -q "✅ Migrations completed successfully"; then
+            if railway logs --service ${SERVICE_NAME} | grep -q "✅ Migrations completed successfully"; then
               echo "✅ Database migrations completed successfully!"
               break
             fi
 
-            if railway logs | grep -q "❌ Migration failed"; then
+            if railway logs --service ${SERVICE_NAME} | grep -q "❌ Migration failed"; then
               echo "❌ Migration failed! Logs:"
-              railway logs --tail 20
+              railway logs --service ${SERVICE_NAME} --tail 20
               railway service delete ${SERVICE_NAME} --yes
               exit 1
             fi
@@ -150,7 +152,7 @@ jobs:
 
           # Cleanup
           echo "🧹 Cleaning up migration service..."
-          railway service delete ${SERVICE_NAME} --yes
+          railway service delete ${SERVICE_NAME} --yes || echo "Service already deleted"
           echo "💰 Migration service cleaned up"
 
   deploy-backend:
@@ -169,28 +171,27 @@ jobs:
       - name: Deploy backend service
         run: |
           export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          railway link --service safehouse-backend
-          
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}"
+
           echo "🚀 Deploying backend with image: ${{ needs.validate-inputs.outputs.backend_image }}"
-          
+
           # Deploy with new image
-          railway up --image "${{ needs.validate-inputs.outputs.backend_image }}" --detach
-          
+          railway up --service safehouse-backend --image "${{ needs.validate-inputs.outputs.backend_image }}" --detach
+
           # Set environment variables for Go backend
-          railway variables set PORT=8080
-          railway variables set GIN_MODE=release
-          
+          railway variables set --service safehouse-backend PORT=8080
+          railway variables set --service safehouse-backend GIN_MODE=release
+
           # Connect to database
-          railway variables copy --service postgres DATABASE_URL
-          
+          railway variables copy --service postgres --service safehouse-backend DATABASE_URL
+
           # Wait for deployment
           echo "⏳ Waiting for backend deployment..."
           sleep 30
-          
+
           # Check deployment status
-          railway logs --tail 20
-          
+          railway logs --service safehouse-backend --tail 20
+
           echo "✅ Backend deployment completed"
 
   deploy-frontend:
@@ -209,24 +210,23 @@ jobs:
       - name: Deploy frontend service
         run: |
           export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          railway link --service safehouse-frontend
-          
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}"
+
           echo "🚀 Deploying frontend with image: ${{ needs.validate-inputs.outputs.frontend_image }}"
-          
+
           # Deploy with new image
-          railway up --image "${{ needs.validate-inputs.outputs.frontend_image }}" --detach
-          
-          # Set basic environment variables (adjust as needed for your frontend)
-          railway variables set PORT=3000
-          
+          railway up --service safehouse-frontend --image "${{ needs.validate-inputs.outputs.frontend_image }}" --detach
+
+          # Set basic environment variables
+          railway variables set --service safehouse-frontend PORT=3000
+
           # Wait for deployment
           echo "⏳ Waiting for frontend deployment..."
           sleep 30
-          
+
           # Check deployment status
-          railway logs --tail 20
-          
+          railway logs --service safehouse-frontend --tail 20
+
           echo "✅ Frontend deployment completed"
 
   post-deployment:
