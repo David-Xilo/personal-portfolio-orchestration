@@ -89,7 +89,7 @@ jobs:
   run-migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [ validate-inputs, check-docker-images, infrastructure-check ]
+    needs: [ check-docker-images, infrastructure-check ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -196,7 +196,7 @@ jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [validate-inputs, deploy-backend]
+    needs: deploy-backend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
