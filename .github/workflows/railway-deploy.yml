@@ -31,44 +31,9 @@ env:
   DOCKER_REGISTRY: xilo
 
 jobs:
-  validate-inputs:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      backend_image: ${{ steps.validate.outputs.backend_image }}
-      frontend_image: ${{ steps.validate.outputs.frontend_image }}
-      migration_image: ${{ steps.validate.outputs.migration_image }}
-    steps:
-      - name: Validate version inputs
-        id: validate
-        run: |
-          # Validate semantic versioning format
-          if [[ ! "${{ inputs.backend_version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid backend version format. Use semantic versioning (e.g., v1.2.3)"
-            exit 1
-          fi
-          
-          if [[ ! "${{ inputs.frontend_version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid frontend version format. Use semantic versioning (e.g., v1.2.3)"
-            exit 1
-          fi
-          
-          if [[ ! "${{ inputs.migration_version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "❌ Invalid migration version format. Use semantic versioning (e.g., v1.0.5)"
-            exit 1
-          fi
-          
-          # Set output variables
-          echo "backend_image=${DOCKER_REGISTRY}/safehouse-main-back:${{ inputs.backend_version }}" >> $GITHUB_OUTPUT
-          echo "frontend_image=${DOCKER_REGISTRY}/safehouse-main-front:${{ inputs.frontend_version }}" >> $GITHUB_OUTPUT
-          echo "migration_image=${DOCKER_REGISTRY}/safehouse-db-schema:${{ inputs.migration_version }}" >> $GITHUB_OUTPUT
-          
-          echo "✅ All version inputs validated successfully"
-
   check-docker-images:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: validate-inputs
     steps:
       - name: Verify Docker images exist
         run: |
@@ -191,7 +156,7 @@ jobs:
   deploy-backend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [validate-inputs, run-migrations]
+    needs: run-migrations
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
