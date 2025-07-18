@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "deploy": {
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 300,
+    "sleepApplication": true,
+    "restartPolicyType": "ALWAYS",
+    "limitOverride": {
+      "containers": {
+        "cpu": 0.25,
+        "memoryBytes": 268435456
+      }
+    }
+  }
+}
