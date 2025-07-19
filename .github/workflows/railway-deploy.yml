@@ -98,10 +98,6 @@ jobs:
 #      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
 #      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Pin Railway CLI to v3.14.0
-        run: |
-          curl -fsSL https://cli.railway.app/install.sh | bash -s -- --version 3.14.0
-
       - name: Update or create service image
         run: |
           echo "🚀 Deploying backend image: $DOCKER_REGISTRY/safehouse-backend-main:$BACKEND_VERSION"
