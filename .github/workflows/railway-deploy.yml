@@ -44,22 +44,10 @@ jobs:
           
           echo "✅ All Docker images verified successfully"
 
-  run-migrations:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: check-docker-images
-    steps:
-      - name: Deploy migrations via API
-        run: |
-          curl -X POST "https://backboard.railway.app/graphql/v2" \
-            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"mutation { serviceInstanceDeploy(serviceId: \"${{ secrets.MIGRATION_SERVICE_ID }}\", input: { dockerImage: \"xilo/safehouse-migrations:latest\" }) { id status } }"}'
-
   deploy-backend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: run-migrations
+    needs: check-docker-images
     container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
