@@ -29,6 +29,9 @@ on:
 env:
   RAILWAY_PROJECT_ID: 03936bb2-d116-4765-beeb-c29074266234
   DOCKER_REGISTRY: xilo
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  BACKEND_VERSION: ${{ inputs.backend_version }}
+  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
 
 jobs:
   check-docker-images:
@@ -68,9 +71,9 @@ jobs:
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#    env:
+#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Run database migrations
         run: |
@@ -91,30 +94,36 @@ jobs:
     timeout-minutes: 10
     needs: run-migrations
     container: ghcr.io/railwayapp/cli:latest
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#    env:
+#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Deploy backend
+      - name: Pin Railway CLI to v3.14.0
         run: |
-          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
+          curl -fsSL https://cli.railway.app/install.sh | bash -s -- --version 3.14.0
+
+      - name: Update or create service image
+        run: |
+          echo "🚀 Deploying backend image: $DOCKER_REGISTRY/safehouse-backend-main:$BACKEND_VERSION"
           railway add \
-              --service safehouse-backend-main \
-              --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
-              --variables "PORT=8080" \
-              --variables "GIN_MODE=release" \
-              --variables "DATABASE_URL=${DATABASE_URL}"
+            --service safehouse-backend-main \
+            --image "${DOCKER_REGISTRY}/safehouse-backend-main:${BACKEND_VERSION}" \
+            --variables "PORT=8080" \
+                        "GIN_MODE=release" \
+                        "DATABASE_URL=${DATABASE_URL}"
+
+      - name: Deploy new Docker image
+        run: |
           railway up --service safehouse-backend-main
-          echo "✅ Backend deployment initiated."
 
   deploy-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-backend
     container: ghcr.io/railwayapp/cli:latest
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#    env:
+#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy frontend
         run: |
@@ -131,9 +140,9 @@ jobs:
     needs: deploy-frontend
     container: ghcr.io/railwayapp/cli:latest
     if: always()
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#    env:
+#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Show status and usage
         run: |
