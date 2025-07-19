@@ -69,6 +69,7 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
     env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Run database migrations
@@ -91,6 +92,7 @@ jobs:
     needs: run-migrations
     container: ghcr.io/railwayapp/cli:latest
     env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy backend
@@ -111,6 +113,7 @@ jobs:
     needs: deploy-backend
     container: ghcr.io/railwayapp/cli:latest
     env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy frontend
@@ -129,6 +132,7 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     if: always()
     env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Show status and usage
