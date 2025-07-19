@@ -81,12 +81,11 @@ jobs:
           SERVICE_NAME="migration-${TIMESTAMP}"
           echo "🚀 Deploying migration service: $SERVICE_NAME"
           railway add \
-            --service "$SERVICE_NAME" \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
-            --variables "DATABASE_URL=${DATABASE_URL}" \
-            --variables "MIGRATION_TIMEOUT=300" \
-            --variables "MIGRATION_VERBOSE=true" \
-            --version
+            -s "$SERVICE_NAME" \
+            -i "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
+            -v "DATABASE_URL=${DATABASE_URL}" \
+            -v "MIGRATION_TIMEOUT=300" \
+            -v "MIGRATION_VERBOSE=true"
           sleep 10
 
   deploy-backend:
@@ -102,10 +101,10 @@ jobs:
         run: |
           echo "🚀 Deploying backend image: $DOCKER_REGISTRY/safehouse-backend-main:$BACKEND_VERSION"
           railway add \
-            --service safehouse-backend-main \
-            --image "${DOCKER_REGISTRY}/safehouse-backend-main:${BACKEND_VERSION}" \
-            --variables "PORT=8080" \
-            --variables "DATABASE_URL=${DATABASE_URL}"
+            -s safehouse-backend-main \
+            -i "${DOCKER_REGISTRY}/safehouse-backend-main:${BACKEND_VERSION}" \
+            -v "PORT=8080" \
+            -v "DATABASE_URL=${DATABASE_URL}"
 
       - name: Deploy new Docker image
         run: |
@@ -124,8 +123,8 @@ jobs:
         run: |
           echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
           railway add \
-              --service safehouse-frontend-main \
-              --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+              -s safehouse-frontend-main \
+              -i "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
           railway up --service safehouse-frontend-main
           echo "✅ Frontend deployment initiated."
 
