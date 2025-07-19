@@ -30,14 +30,11 @@ env:
   RAILWAY_PROJECT_ID: 03936bb2-d116-4765-beeb-c29074266234
   DOCKER_REGISTRY: xilo
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-#  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
 
 jobs:
   check-docker-images:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
     steps:
       - name: Verify Docker images exist
         run: |
@@ -97,9 +94,6 @@ jobs:
     timeout-minutes: 10
     needs: run-migrations
     container: ghcr.io/railwayapp/cli:latest
-#    env:
-#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Update or create service image
         run: |
@@ -119,9 +113,6 @@ jobs:
     timeout-minutes: 10
     needs: deploy-backend
     container: ghcr.io/railwayapp/cli:latest
-#    env:
-#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy frontend
         run: |
@@ -138,9 +129,6 @@ jobs:
     needs: deploy-frontend
     container: ghcr.io/railwayapp/cli:latest
     if: always()
-#    env:
-#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Show status and usage
         run: |
