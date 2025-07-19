@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
-    needs: check-docker-images
+    needs: add-all-services
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
