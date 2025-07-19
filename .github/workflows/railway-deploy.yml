@@ -40,9 +40,9 @@ jobs:
         run: |
           echo "🔍 Verifying Docker images exist on Docker Hub..."
           
-          BACKEND_IMAGE="${DOCKER_REGISTRY}/safehouse-backend-main:${{ inputs.backend_version }}"
-          FRONTEND_IMAGE="${DOCKER_REGISTRY}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          MIGRATION_IMAGE="${DOCKER_REGISTRY}/safehouse-migrations:${{ inputs.migration_version }}"
+          BACKEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
+          FRONTEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          MIGRATION_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}"
           
           # Check backend image
           if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
