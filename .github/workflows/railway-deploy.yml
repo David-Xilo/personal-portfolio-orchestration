@@ -77,8 +77,6 @@ jobs:
         run: |
           TIMESTAMP=$(date +%s)
           SERVICE_NAME="migration-${TIMESTAMP}"
-          echo "🚀 Link project"
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment "${{ inputs.environment }}"
           echo "🚀 Deploying migration service: $SERVICE_NAME"
           railway add \
             --service "$SERVICE_NAME" \
