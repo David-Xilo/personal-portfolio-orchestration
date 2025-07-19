@@ -63,30 +63,11 @@ jobs:
           
           echo "✅ All Docker images verified successfully"
 
-  infrastructure-check:
-    runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
-    timeout-minutes: 10
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Ensure PostgreSQL service exists
-        run: |
-          echo "🐘 Ensuring PostgreSQL service exists..."
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service postgres
-          if ! railway status | grep -q -i postgres; then
-            railway add --database postgres
-          else
-            echo "✅ PostgreSQL service already exists"
-          fi
-
   run-migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
-    needs: [check-docker-images, infrastructure-check]
+    needs: check-docker-images
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
