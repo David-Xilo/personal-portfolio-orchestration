@@ -54,19 +54,7 @@ jobs:
           curl -X POST "https://backboard.railway.com/graphql/v2" \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{
-              "query": "mutation { 
-                serviceInstanceDeploy(
-                  serviceId: \"${{ secrets.MIGRATION_SERVICE_ID }}\",
-                  input: { 
-                    dockerImage: \"xilo/safehouse-migrations:latest\"
-                  }
-                ) { 
-                  id 
-                  status 
-                } 
-              }"
-            }'
+            -d '{"query":"mutation { serviceInstanceDeploy(serviceId: \"${{ secrets.MIGRATION_SERVICE_ID }}\", input: { dockerImage: \"xilo/safehouse-migrations:latest\" }) { id status } }"}'
 
   deploy-backend:
     runs-on: ubuntu-latest
