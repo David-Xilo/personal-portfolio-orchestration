@@ -67,7 +67,7 @@ jobs:
   add-all-services:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    container: ghcr.io/railwayapp/cli:v4.5.5
+    container: ghcr.io/railwayapp/cli:4.5.5
     needs: check-docker-images
     env:
       RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
@@ -100,7 +100,7 @@ jobs:
   run-migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    container: ghcr.io/railwayapp/cli:v4.5.5
+    container: ghcr.io/railwayapp/cli:4.5.5
     needs: add-all-services
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: run-migrations
-    container: ghcr.io/railwayapp/cli:v4.5.5
+    container: ghcr.io/railwayapp/cli:4.5.5
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-backend
-    container: ghcr.io/railwayapp/cli:v4.5.5
+    container: ghcr.io/railwayapp/cli:4.5.5
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
@@ -148,7 +148,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: deploy-frontend
-    container: ghcr.io/railwayapp/cli:v4.5.5
+    container: ghcr.io/railwayapp/cli:4.5.5
     if: always()
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
