@@ -81,6 +81,7 @@ jobs:
             --variables "DATABASE_URL=${DATABASE_URL}" \
             --variables "MIGRATION_TIMEOUT=300" \
             --variables "MIGRATION_VERBOSE=true"
+          echo "🚀 Running up
           railway up --service "$SERVICE_NAME" --ci
           sleep 10
           railway logs --service "$SERVICE_NAME" --wait
