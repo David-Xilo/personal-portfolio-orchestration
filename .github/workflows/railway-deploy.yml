@@ -30,7 +30,6 @@ env:
   RAILWAY_PROJECT_ID: 03936bb2-d116-4765-beeb-c29074266234
   DOCKER_REGISTRY: xilo
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-  BACKEND_VERSION: ${{ inputs.backend_version }}
   RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
 
 jobs:
@@ -71,9 +70,9 @@ jobs:
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
-#    env:
-#      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Run database migrations
         run: |
@@ -86,7 +85,13 @@ jobs:
             --variables "DATABASE_URL=${DATABASE_URL}" \
             --variables "MIGRATION_TIMEOUT=300" \
             --variables "MIGRATION_VERBOSE=true"
+          railway up --service "$SERVICE_NAME" --ci
           sleep 10
+          railway logs --service "$SERVICE_NAME" --wait
+          
+          echo "🧹 Cleaning up migration service..."
+          railway service delete "$SERVICE_NAME" --yes || true
+          echo "✅ Migrations completed."
 
   deploy-backend:
     runs-on: ubuntu-latest
