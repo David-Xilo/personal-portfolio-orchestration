@@ -68,6 +68,7 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     timeout-minutes: 10
     env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +95,7 @@ jobs:
           TIMESTAMP=$(date +%s)
           SERVICE_NAME="migration-${TIMESTAMP}"
           echo "🚀 Deploying migration service: $SERVICE_NAME"
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service "$SERVICE_NAME"
+#          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service "$SERVICE_NAME"
           railway add \
             --service "$SERVICE_NAME" \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
@@ -115,7 +116,7 @@ jobs:
       - name: Deploy backend
         run: |
           echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service safehouse-backend-main
+#          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service safehouse-backend-main
           railway add \
               --service safehouse-backend-main \
               --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
@@ -136,7 +137,7 @@ jobs:
       - name: Deploy frontend
         run: |
           echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service safehouse-frontend-main
+#          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service safehouse-frontend-main
           railway add \
               --service safehouse-frontend-main \
               --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
