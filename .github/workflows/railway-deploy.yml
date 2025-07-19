@@ -52,6 +52,7 @@ jobs:
     steps:
       - name: Deploy migrations via API
         run: |
+          apt-get update && apt-get install -y curl
           curl -X POST "https://backboard.railway.com/graphql/v2" \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
