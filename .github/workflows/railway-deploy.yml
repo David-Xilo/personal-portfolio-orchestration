@@ -3,21 +3,6 @@ name: Deploy Railway Infrastructure
 on:
   workflow_dispatch:
     inputs:
-      backend_version:
-        description: 'Backend Docker image version (e.g., v1.2.3)'
-        default: 'latest'
-        required: true
-        type: string
-      frontend_version:
-        description: 'Frontend Docker image version (e.g., v2.1.0)'
-        default: 'latest'
-        required: true
-        type: string
-      migration_version:
-        description: 'Migration Docker image version (e.g., v1.0.5)'
-        default: 'latest'
-        required: true
-        type: string
       environment:
         description: 'Deployment environment'
         required: true
@@ -40,9 +25,9 @@ jobs:
         run: |
           echo "🔍 Verifying Docker images exist on Docker Hub..."
           
-          BACKEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
-          FRONTEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          MIGRATION_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}"
+          BACKEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:latest"
+          FRONTEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:latest"
+          MIGRATION_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-migrations:latest"
           
           # Check backend image
           if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
@@ -64,44 +49,11 @@ jobs:
           
           echo "✅ All Docker images verified successfully"
 
-  add-all-services:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    container: ghcr.io/railwayapp/cli:4.5.5
-    needs: check-docker-images
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-    steps:
-      - name: Add images
-        run: |
-          echo "🚀 Linking"
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment "${{ inputs.environment }}" --service ""
-          echo "🚀 Deploying migration service"
-          railway add \
-            --service safehouse-migrations \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
-            --variables "DATABASE_URL=${DATABASE_URL}" \
-            --variables "MIGRATION_TIMEOUT=300" \
-            --variables "MIGRATION_VERBOSE=true"
-          
-          echo "🚀 Deploying backend service"
-          railway add \
-            --service safehouse-backend-main \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
-            --variables "PORT=8080" \
-            --variables "DATABASE_URL=${DATABASE_URL}"
-          
-          echo "🚀 Deploying frontend service"
-          railway add \
-            --service safehouse-frontend-main \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          
-
   run-migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    container: ghcr.io/railwayapp/cli:4.5.5
-    needs: add-all-services
+    container: ghcr.io/railwayapp/cli:latest
+    needs: check-docker-images
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
@@ -120,13 +72,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: run-migrations
-    container: ghcr.io/railwayapp/cli:4.5.5
+    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy backend
         run: |
-          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
+          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:latest"
           railway up --service safehouse-backend-main
           echo "✅ Backend deployment initiated."
 
@@ -134,13 +86,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-backend
-    container: ghcr.io/railwayapp/cli:4.5.5
+    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy frontend
         run: |
-          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:latest"
           railway up --service safehouse-frontend-main
           echo "✅ Frontend deployment initiated."
 
@@ -148,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: deploy-frontend
-    container: ghcr.io/railwayapp/cli:4.5.5
+    container: ghcr.io/railwayapp/cli:latest
     if: always()
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
