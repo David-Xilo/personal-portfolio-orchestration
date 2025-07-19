@@ -11,11 +11,6 @@ on:
         options:
           - production
 
-env:
-  CI: "true"
-  RAILWAY_PROJECT_ID: 03936bb2-d116-4765-beeb-c29074266234
-  DOCKER_REGISTRY: xilo
-
 jobs:
   check-docker-images:
     runs-on: ubuntu-latest
@@ -25,9 +20,9 @@ jobs:
         run: |
           echo "🔍 Verifying Docker images exist on Docker Hub..."
           
-          BACKEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:latest"
-          FRONTEND_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:latest"
-          MIGRATION_IMAGE="${{ env.DOCKER_REGISTRY }}/safehouse-migrations:latest"
+          BACKEND_IMAGE="xilo/safehouse-backend-main:latest"
+          FRONTEND_IMAGE="xilo/safehouse-frontend-main:latest"
+          MIGRATION_IMAGE="xilo/safehouse-migrations:latest"
           
           # Check backend image
           if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
@@ -54,19 +49,25 @@ jobs:
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Run database migrations
+      - name: Deploy migrations via API
         run: |
-          echo "🚀 Running up"
-          railway up --service safehouse-migrations --ci
-          sleep 10
-          railway logs --service safehouse-migrations --wait
-          
-          echo "🧹 Cleaning up migration service..."
-          railway service delete safehouse-migrations --yes || true
-          echo "✅ Migrations completed."
+          curl -X POST "https://backboard.railway.com/graphql/v2" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation { 
+                serviceInstanceDeploy(
+                  serviceId: \"${{ secrets.MIGRATION_SERVICE_ID }}\",
+                  input: { 
+                    dockerImage: \"xilo/safehouse-migrations:latest\"
+                  }
+                ) { 
+                  id 
+                  status 
+                } 
+              }"
+            }'
 
   deploy-backend:
     runs-on: ubuntu-latest
@@ -78,8 +79,8 @@ jobs:
     steps:
       - name: Deploy backend
         run: |
-          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:latest"
-          railway up --service safehouse-backend-main
+          echo "🚀 Deploying backend image: xilo/safehouse-backend-main:latest"
+          railway redeploy --service safehouse-backend-main
           echo "✅ Backend deployment initiated."
 
   deploy-frontend:
@@ -92,8 +93,8 @@ jobs:
     steps:
       - name: Deploy frontend
         run: |
-          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:latest"
-          railway up --service safehouse-frontend-main
+          echo "🚀 Deploying frontend image: xilo/safehouse-frontend-main:latest"
+          railway redeploy --service safehouse-frontend-main
           echo "✅ Frontend deployment initiated."
 
   post-deployment:
@@ -112,4 +113,4 @@ jobs:
           echo "💰 Current usage:"
           railway usage
           echo "🎉 Done! Check it here:"
-          echo "https://railway.app/project/${{ env.RAILWAY_PROJECT_ID }}"
+          echo "https://railway.app/project/${{ secrets.RAILWAY_PROJECT_ID }}"
