@@ -39,9 +39,9 @@ jobs:
         run: |
           echo "🔍 Verifying Docker images exist on Docker Hub..."
           
-          BACKEND_IMAGE="${DOCKER_REGISTRY}/safehouse-main-back:${{ inputs.backend_version }}"
-          FRONTEND_IMAGE="${DOCKER_REGISTRY}/safehouse-main-front:${{ inputs.frontend_version }}"
-          MIGRATION_IMAGE="${DOCKER_REGISTRY}/safehouse-db-schema:${{ inputs.migration_version }}"
+          BACKEND_IMAGE="${DOCKER_REGISTRY}/safehouse-backend-main:${{ inputs.backend_version }}"
+          FRONTEND_IMAGE="${DOCKER_REGISTRY}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          MIGRATION_IMAGE="${DOCKER_REGISTRY}/safehouse-migrations:${{ inputs.migration_version }}"
           
           # Check backend image
           if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
@@ -111,14 +111,14 @@ jobs:
     steps:
       - name: Deploy backend
         run: |
-          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-main-back:${{ inputs.backend_version }}"
+          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
           railway up \
-            --service safehouse-main-back \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-main-back:${{ inputs.backend_version }}" \
+            --service safehouse-backend-main \
+            --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
             --detach
-          railway variables set --service safehouse-main-back PORT=8080
-          railway variables set --service safehouse-main-back GIN_MODE=release
-          railway variables copy --service postgres --service safehouse-main-back DATABASE_URL
+          railway variables set --service safehouse-backend-main PORT=8080
+          railway variables set --service safehouse-backend-main GIN_MODE=release
+          railway variables copy --service postgres --service safehouse-backend-main DATABASE_URL
           echo "✅ Backend deployment initiated."
 
   deploy-frontend:
@@ -131,10 +131,10 @@ jobs:
     steps:
       - name: Deploy frontend
         run: |
-          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-main-front:${{ inputs.frontend_version }}"
+          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
           railway up \
-            --service safehouse-main-front \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-main-front:${{ inputs.frontend_version }}" \
+            --service safehouse-frontend-main \
+            --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}" \
             --detach
           echo "✅ Frontend deployment initiated."
 
