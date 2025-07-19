@@ -75,7 +75,7 @@ jobs:
       - name: Add images
         run: |
           echo "🚀 Linking"
-          RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment "${{ inputs.environment }}" --service ""
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment "${{ inputs.environment }}" --service ""
           echo "🚀 Deploying migration service"
           railway add \
             --service safehouse-migrations \
