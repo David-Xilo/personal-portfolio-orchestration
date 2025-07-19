@@ -75,7 +75,7 @@ jobs:
         run: |
           export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
 
-          # Link to project (FIXED)
+          railway login
           railway link --project "${{ env.RAILWAY_PROJECT_ID }}"
 
           echo "🐘 Ensuring PostgreSQL service exists..."
