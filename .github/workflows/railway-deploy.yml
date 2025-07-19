@@ -74,8 +74,9 @@ jobs:
       - name: Ensure PostgreSQL service exists
         run: |
           echo "🐘 Ensuring PostgreSQL service exists..."
-          if ! railway service list | grep -q postgres; then
-            railway add postgres
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service postgres
+          if ! railway status | grep -q -i postgres; then
+            railway add --database postgres
           else
             echo "✅ PostgreSQL service already exists"
           fi
@@ -93,13 +94,15 @@ jobs:
           TIMESTAMP=$(date +%s)
           SERVICE_NAME="migration-${TIMESTAMP}"
           echo "🚀 Deploying migration service: $SERVICE_NAME"
-          railway up \
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service "$SERVICE_NAME"
+          railway add \
             --service "$SERVICE_NAME" \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
-            --detach
-          railway variables copy --service postgres --service "$SERVICE_NAME" DATABASE_URL
-          railway variables set --service "$SERVICE_NAME" MIGRATION_TIMEOUT=300
-          railway variables set --service "$SERVICE_NAME" MIGRATION_VERBOSE=true
+            --variables "DATABASE_URL=${DATABASE_URL}" \
+            --variables "MIGRATION_TIMEOUT=300" \
+            --variables "MIGRATION_VERBOSE=true" \
+            --version
+          sleep 10
 
   deploy-backend:
     runs-on: ubuntu-latest
@@ -112,13 +115,14 @@ jobs:
       - name: Deploy backend
         run: |
           echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
-          railway up \
-            --service safehouse-backend-main \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
-            --detach
-          railway variables set --service safehouse-backend-main PORT=8080
-          railway variables set --service safehouse-backend-main GIN_MODE=release
-          railway variables copy --service postgres --service safehouse-backend-main DATABASE_URL
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service safehouse-backend-main
+          railway add \
+              --service safehouse-backend-main \
+              --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
+              --variables "PORT=8080" \
+              --variables "GIN_MODE=release" \
+              --variables "DATABASE_URL=${DATABASE_URL}"
+          railway up --service safehouse-backend-main
           echo "✅ Backend deployment initiated."
 
   deploy-frontend:
@@ -132,10 +136,11 @@ jobs:
       - name: Deploy frontend
         run: |
           echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          railway up \
-            --service safehouse-frontend-main \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}" \
-            --detach
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service safehouse-frontend-main
+          railway add \
+              --service safehouse-frontend-main \
+              --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          railway up --service safehouse-frontend-main
           echo "✅ Frontend deployment initiated."
 
   post-deployment:
