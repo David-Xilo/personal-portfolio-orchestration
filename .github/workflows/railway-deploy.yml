@@ -105,8 +105,8 @@ jobs:
             --service safehouse-backend-main \
             --image "${DOCKER_REGISTRY}/safehouse-backend-main:${BACKEND_VERSION}" \
             --variables "PORT=8080" \
-                        "GIN_MODE=release" \
-                        "DATABASE_URL=${DATABASE_URL}"
+            --variables "GIN_MODE=release" \
+            --variables "DATABASE_URL=${DATABASE_URL}"
 
       - name: Deploy new Docker image
         run: |
