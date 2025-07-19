@@ -51,7 +51,7 @@ jobs:
     steps:
       - name: Deploy migrations via API
         run: |
-          curl -X POST "https://backboard.railway.com/graphql/v2" \
+          curl -X POST "https://backboard.railway.app/graphql/v2" \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d '{"query":"mutation { serviceInstanceDeploy(serviceId: \"${{ secrets.MIGRATION_SERVICE_ID }}\", input: { dockerImage: \"xilo/safehouse-migrations:latest\" }) { id status } }"}'
