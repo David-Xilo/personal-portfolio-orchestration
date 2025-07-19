@@ -36,6 +36,8 @@ jobs:
   check-docker-images:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
     steps:
       - name: Verify Docker images exist
         run: |
@@ -70,16 +72,12 @@ jobs:
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
-#    env:
-##      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Run database migrations
         run: |
           TIMESTAMP=$(date +%s)
           SERVICE_NAME="migration-${TIMESTAMP}"
           echo "🚀 Deploying migration service: $SERVICE_NAME"
-#          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment production
           railway add \
             --service "$SERVICE_NAME" \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
