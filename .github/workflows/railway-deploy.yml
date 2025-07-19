@@ -70,11 +70,12 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
     steps:
       - name: Add images
         run: |
           echo "🚀 Deploying migration service"
+          RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment "${{ inputs.environment }}" --service ""
           railway add \
             --service safehouse-migrations \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
