@@ -39,21 +39,25 @@ jobs:
         run: |
           echo "🔍 Verifying Docker images exist on Docker Hub..."
           
+          BACKEND_IMAGE="${DOCKER_REGISTRY}/safehouse-main-back:${{ inputs.backend_version }}"
+          FRONTEND_IMAGE="${DOCKER_REGISTRY}/safehouse-main-front:${{ inputs.frontend_version }}"
+          MIGRATION_IMAGE="${DOCKER_REGISTRY}/safehouse-db-schema:${{ inputs.migration_version }}"
+          
           # Check backend image
-          if ! docker manifest inspect ${{ needs.validate-inputs.outputs.backend_image }} > /dev/null 2>&1; then
-            echo "❌ Backend image not found: ${{ needs.validate-inputs.outputs.backend_image }}"
+          if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
+            echo "❌ Backend image not found: $BACKEND_IMAGE"
             exit 1
           fi
           
           # Check frontend image  
-          if ! docker manifest inspect ${{ needs.validate-inputs.outputs.frontend_image }} > /dev/null 2>&1; then
-            echo "❌ Frontend image not found: ${{ needs.validate-inputs.outputs.frontend_image }}"
+          if ! docker manifest inspect $FRONTEND_IMAGE > /dev/null 2>&1; then
+            echo "❌ Frontend image not found: $FRONTEND_IMAGE"
             exit 1
           fi
           
           # Check migration image
-          if ! docker manifest inspect ${{ needs.validate-inputs.outputs.migration_image }} > /dev/null 2>&1; then
-            echo "❌ Migration image not found: ${{ needs.validate-inputs.outputs.migration_image }}"
+          if ! docker manifest inspect $MIGRATION_IMAGE > /dev/null 2>&1; then
+            echo "❌ Migration image not found: $MIGRATION_IMAGE"
             exit 1
           fi
           
@@ -101,6 +105,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: run-migrations
+    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
@@ -120,6 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-backend
+    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
@@ -136,6 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: deploy-frontend
+    container: ghcr.io/railwayapp/cli:latest
     if: always()
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
