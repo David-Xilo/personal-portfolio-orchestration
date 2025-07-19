@@ -39,21 +39,25 @@ jobs:
         run: |
           echo "🔍 Verifying Docker images exist on Docker Hub..."
           
+          BACKEND_IMAGE="${DOCKER_REGISTRY}/safehouse-backend-main:${{ inputs.backend_version }}"
+          FRONTEND_IMAGE="${DOCKER_REGISTRY}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          MIGRATION_IMAGE="${DOCKER_REGISTRY}/safehouse-migrations:${{ inputs.migration_version }}"
+          
           # Check backend image
-          if ! docker manifest inspect ${{ needs.validate-inputs.outputs.backend_image }} > /dev/null 2>&1; then
-            echo "❌ Backend image not found: ${{ needs.validate-inputs.outputs.backend_image }}"
+          if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
+            echo "❌ Backend image not found: $BACKEND_IMAGE"
             exit 1
           fi
           
           # Check frontend image  
-          if ! docker manifest inspect ${{ needs.validate-inputs.outputs.frontend_image }} > /dev/null 2>&1; then
-            echo "❌ Frontend image not found: ${{ needs.validate-inputs.outputs.frontend_image }}"
+          if ! docker manifest inspect $FRONTEND_IMAGE > /dev/null 2>&1; then
+            echo "❌ Frontend image not found: $FRONTEND_IMAGE"
             exit 1
           fi
           
           # Check migration image
-          if ! docker manifest inspect ${{ needs.validate-inputs.outputs.migration_image }} > /dev/null 2>&1; then
-            echo "❌ Migration image not found: ${{ needs.validate-inputs.outputs.migration_image }}"
+          if ! docker manifest inspect $MIGRATION_IMAGE > /dev/null 2>&1; then
+            echo "❌ Migration image not found: $MIGRATION_IMAGE"
             exit 1
           fi
           
@@ -61,190 +65,96 @@ jobs:
 
   infrastructure-check:
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     timeout-minutes: 10
+    env:
+      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
+      - uses: actions/checkout@v4
+      - name: Ensure PostgreSQL service exists
         run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Setup Railway infrastructure
-        run: |
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-
           echo "🐘 Ensuring PostgreSQL service exists..."
-          if ! railway service list | grep -q "postgres"; then
-            echo "Creating PostgreSQL service..."
-            railway add postgres
+          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service postgres
+          if ! railway status | grep -q -i postgres; then
+            railway add --database postgres
           else
-            echo "PostgreSQL service already exists"
+            echo "✅ PostgreSQL service already exists"
           fi
-
-          echo "✅ Infrastructure check completed"
 
   run-migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [ check-docker-images, infrastructure-check ]
+    container: ghcr.io/railwayapp/cli:latest
+    needs: [check-docker-images, infrastructure-check]
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
       - name: Run database migrations
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-
           TIMESTAMP=$(date +%s)
           SERVICE_NAME="migration-${TIMESTAMP}"
-
-          echo "🚀 Starting database migration with version: ${{ inputs.migration_version }}"
-          echo "Service name: ${SERVICE_NAME}"
-
-          # Create temporary migration service
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          railway service create ${SERVICE_NAME}
-          railway link --service ${SERVICE_NAME}
-
-          # Deploy migration image
-          railway up --image "xilo/safehouse-db-schema:${{ inputs.migration_version }}" --detach
-
-          # Connect to database
-          railway variables copy --service postgres DATABASE_URL
-
-          # Monitor migration progress
-          echo "📋 Monitoring migration progress..."
-          TIMEOUT=300
-          COUNTER=0
-
-          while [ $COUNTER -lt $TIMEOUT ]; do
-            if railway logs | grep -q "✅ Migrations completed successfully"; then
-              echo "✅ Database migrations completed successfully!"
-              break
-            fi
-
-            if railway logs | grep -q "❌ Migration failed"; then
-              echo "❌ Migration failed! Logs:"
-              railway logs --tail 20
-              railway service delete ${SERVICE_NAME} --yes
-              exit 1
-            fi
-
-            sleep 5
-            COUNTER=$((COUNTER + 5))
-
-            if [ $((COUNTER % 30)) -eq 0 ]; then
-              echo "⏳ Still waiting... ($COUNTER/${TIMEOUT}s)"
-            fi
-          done
-
-          # Cleanup
-          echo "🧹 Cleaning up migration service..."
-          railway service delete ${SERVICE_NAME} --yes
-          echo "💰 Migration service cleaned up"
+          echo "🚀 Deploying migration service: $SERVICE_NAME"
+          railway add \
+            --service "$SERVICE_NAME" \
+            --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
+            --variables "DATABASE_URL=${DATABASE_URL}" \
+            --variables "MIGRATION_TIMEOUT=300" \
+            --variables "MIGRATION_VERBOSE=true" \
+            --version
+          sleep 10
 
   deploy-backend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: run-migrations
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
+      - name: Deploy backend
         run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Deploy backend service
-        run: |
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          railway link --service safehouse-backend
-          
-          echo "🚀 Deploying backend with image: ${{ needs.validate-inputs.outputs.backend_image }}"
-          
-          # Deploy with new image
-          railway up --image "${{ needs.validate-inputs.outputs.backend_image }}" --detach
-          
-          # Set environment variables for Go backend
-          railway variables set PORT=8080
-          railway variables set GIN_MODE=release
-          
-          # Connect to database
-          railway variables copy --service postgres DATABASE_URL
-          
-          # Wait for deployment
-          echo "⏳ Waiting for backend deployment..."
-          sleep 30
-          
-          # Check deployment status
-          railway logs --tail 20
-          
-          echo "✅ Backend deployment completed"
+          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
+          railway add \
+              --service safehouse-backend-main \
+              --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
+              --variables "PORT=8080" \
+              --variables "GIN_MODE=release" \
+              --variables "DATABASE_URL=${DATABASE_URL}"
+          railway up --service safehouse-backend-main
+          echo "✅ Backend deployment initiated."
 
   deploy-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-backend
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Railway CLI
+      - name: Deploy frontend
         run: |
-          curl -fsSL https://railway.app/install.sh | sh
-          echo "$HOME/.railway/bin" >> $GITHUB_PATH
-
-      - name: Deploy frontend service
-        run: |
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          railway link --service safehouse-frontend
-          
-          echo "🚀 Deploying frontend with image: ${{ needs.validate-inputs.outputs.frontend_image }}"
-          
-          # Deploy with new image
-          railway up --image "${{ needs.validate-inputs.outputs.frontend_image }}" --detach
-          
-          # Set basic environment variables (adjust as needed for your frontend)
-          railway variables set PORT=3000
-          
-          # Wait for deployment
-          echo "⏳ Waiting for frontend deployment..."
-          sleep 30
-          
-          # Check deployment status
-          railway logs --tail 20
-          
-          echo "✅ Frontend deployment completed"
+          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          railway add \
+              --service safehouse-frontend-main \
+              --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
+          railway up --service safehouse-frontend-main
+          echo "✅ Frontend deployment initiated."
 
   post-deployment:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [deploy-frontend]
+    needs: deploy-frontend
+    container: ghcr.io/railwayapp/cli:latest
     if: always()
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
-      - name: Final status check
+      - name: Show status and usage
         run: |
-          export RAILWAY_TOKEN="${{ secrets.RAILWAY_TOKEN }}"
-          railway link ${{ env.RAILWAY_PROJECT_ID }}
-          
           echo "📊 Final deployment status:"
           railway status
-          
-          echo "💰 Current usage after deployment:"
+          echo "💰 Current usage:"
           railway usage
-          
-          echo "🎉 Deployment workflow completed!"
-          echo "🔗 Check your services at: https://railway.app/project/${{ env.RAILWAY_PROJECT_ID }}"
+          echo "🎉 Done! Check it here:"
+          echo "https://railway.app/project/${{ env.RAILWAY_PROJECT_ID }}"
