@@ -30,7 +30,7 @@ env:
   RAILWAY_PROJECT_ID: 03936bb2-d116-4765-beeb-c29074266234
   DOCKER_REGISTRY: xilo
   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+#  RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
 
 jobs:
   check-docker-images:
@@ -70,16 +70,16 @@ jobs:
     timeout-minutes: 15
     container: ghcr.io/railwayapp/cli:latest
     needs: check-docker-images
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+#    env:
+##      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+#      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Run database migrations
         run: |
           TIMESTAMP=$(date +%s)
           SERVICE_NAME="migration-${TIMESTAMP}"
           echo "🚀 Deploying migration service: $SERVICE_NAME"
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment production
+#          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment production
           railway add \
             --service "$SERVICE_NAME" \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
