@@ -74,8 +74,9 @@ jobs:
     steps:
       - name: Add images
         run: |
-          echo "🚀 Deploying migration service"
+          echo "🚀 Linking"
           RAILWAY_TOKEN=${{ secrets.RAILWAY_TOKEN }} railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --environment "${{ inputs.environment }}" --service ""
+          echo "🚀 Deploying migration service"
           railway add \
             --service safehouse-migrations \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
@@ -83,12 +84,14 @@ jobs:
             --variables "MIGRATION_TIMEOUT=300" \
             --variables "MIGRATION_VERBOSE=true"
           
+          echo "🚀 Deploying backend service"
           railway add \
             --service safehouse-backend-main \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
             --variables "PORT=8080" \
             --variables "DATABASE_URL=${DATABASE_URL}"
           
+          echo "🚀 Deploying frontend service"
           railway add \
             --service safehouse-frontend-main \
             --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
