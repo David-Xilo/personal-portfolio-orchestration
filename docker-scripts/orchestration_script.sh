@@ -3,8 +3,6 @@
 
 set -e
 
-PROJECT_ID="personal-portfolio-safehouse"
-
 NETWORK_NAME="safehouse_dev_network"
 
 FRONTEND_URL=http://localhost
