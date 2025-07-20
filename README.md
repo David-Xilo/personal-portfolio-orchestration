@@ -2,9 +2,9 @@
 Safehouse orchestration repository
 
 Check related projects:
-- https://github.com/David-Xilo/safehouse-main-back
-- https://github.com/David-Xilo/safehouse-db-schema
-- https://github.com/David-Xilo/safehouse-main-front
+- **Frontend**: https://github.com/David-Xilo/safehouse-main-front
+- **Backend**: https://github.com/David-Xilo/safehouse-main-back
+- **Database**: https://github.com/David-Xilo/safehouse-db-schema
 
 # To run locally
 
