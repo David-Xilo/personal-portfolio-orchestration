@@ -1,5 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "build": {
+    "dockerImage": "xilo/safehouse-backend-main:latest"
+  },
   "deploy": {
     "healthcheckPath": "/health",
     "healthcheckTimeout": 300,

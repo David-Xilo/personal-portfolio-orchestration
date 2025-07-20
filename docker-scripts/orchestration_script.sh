@@ -34,6 +34,9 @@ POSTGRES_USER="dev_user"
 POSTGRES_PASSWORD="mypassword"
 POSTGRES_DB="dev_db"
 
+# "postgres://dev_user:mypassword@postgres-dev:5432/dev_db?sslmode=disable"
+DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+
 POSTGRES_VOLUME=safehouse_postgres_volume
 
 NETWORK_ALIAS=${POSTGRES_HOST}
@@ -72,8 +75,17 @@ container_running() {
     docker ps --format '{{.Names}}' | grep -q "^$1$"
 }
 
+create_network() {
+    if docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}$"; then
+        print_status "Network ${NETWORK_NAME} already exists"
+    else
+        print_status "Creating development network: ${NETWORK_NAME}"
+        docker network create ${NETWORK_NAME}
+    fi
+}
+
 wait_for_postgres() {
-    print_status "Waiting for PostgreSQL to be ready..."
+    print_status "Waiting for PostgreSQL to be ready"
     local max_attempts=30
     local attempt=1
 
@@ -83,23 +95,13 @@ wait_for_postgres() {
             return 0
         fi
 
-        print_status "Attempt $attempt/$max_attempts - PostgreSQL not ready yet, waiting 2 seconds..."
+        print_status "Attempt $attempt/$max_attempts - PostgreSQL not ready yet, waiting 2 seconds"
         sleep 2
         attempt=$((attempt + 1))
     done
 
     print_error "PostgreSQL failed to start within expected time"
     return 1
-}
-
-
-create_network() {
-    if docker network ls --format '{{.Name}}' | grep -q "^${NETWORK_NAME}$"; then
-        print_status "Network ${NETWORK_NAME} already exists"
-    else
-        print_status "Creating development network: ${NETWORK_NAME}"
-        docker network create ${NETWORK_NAME}
-    fi
 }
 
 start_postgres() {
@@ -137,43 +139,24 @@ run_migrations() {
     print_status "Building migration container"
     docker build -f ${MIGRATION_DOCKERFILE} -t "${MIGRATION_IMAGE}" ${MIGRATION_CONTEXT}
 
-    print_status "Applying database migrations..."
+    print_status "Applying database migrations"
     print_status "changing to migrations directory"
     pwd
     print_status "applying migrations"
     docker run --rm \
         --network ${NETWORK_NAME} \
+        -e DATABASE_URL="${DATABASE_URL}" \
         -e POSTGRES_HOST=${POSTGRES_HOST} \
         -e POSTGRES_PORT=${POSTGRES_PORT} \
         -e POSTGRES_USER=${POSTGRES_USER} \
-        -e POSTGRES_PASSWORD=${POSTGRES_PASSWORD} \
         -e POSTGRES_DB=${POSTGRES_DB} \
         ${MIGRATION_IMAGE} up
 
     cd "${original_dir}"
 
+    sleep 5
+
     print_status "Migrations completed successfully"
-}
-
-create_local_secrets() {
-    print_section "Setting Up Local Development Secrets"
-
-    local secrets_dir="./dev-secrets"
-    mkdir -p "${secrets_dir}"
-
-    # Create local secret files (matching the secret names from your backend)
-    echo "${DEV_JWT_SECRET}" > "${secrets_dir}/${JwtSecretName:-safehouse-jwt-signing-key}"
-    echo "${DEV_DB_PASSWORD}" > "${secrets_dir}/safehouse-db-password"
-
-    # Set appropriate permissions
-    chmod 600 "${secrets_dir}"/*
-
-    print_status "Local development secrets created in ${secrets_dir}/"
-    print_warning "These are for development only - not production secrets!"
-
-    # Show what secrets were created
-    echo "Created secrets:"
-    ls -la "${secrets_dir}/"
 }
 
 start_backend() {
@@ -184,39 +167,23 @@ start_backend() {
         return 0
     fi
 
-    # Create local secrets first
-    create_local_secrets
-
-    print_status "Building backend container..."
+    print_status "Building backend container"
     docker build -t ${BACKEND_IMAGE} ${BACKEND_DOCKERFILE}
-
-    print_status "Starting backend container with local development secrets..."
-
-    local secrets_path
-    secrets_path="$(pwd)/dev-secrets"
 
     docker run \
         -e ENV=development \
-        -e SECRETS_PATH=/app/secrets \
-        -e DB_HOST="${POSTGRES_HOST}" \
-        -e DB_USER="${POSTGRES_USER}" \
-        -e DB_PORT="${POSTGRES_PORT}" \
-        -e DB_NAME="${POSTGRES_DB}" \
+        -e DATABASE_URL="${DATABASE_URL}" \
         -e FRONTEND_URL=${FRONTEND_URL} \
-        -e GCP_PROJECT_ID=${PROJECT_ID} \
+        -e PORT=${BACKEND_PORT} \
         --network ${NETWORK_NAME} \
         --name ${BACKEND_CONTAINER} \
         -p ${BACKEND_PORT}:${BACKEND_PORT} \
-        -v "${secrets_path}:/app/secrets:ro" \
         -d ${BACKEND_IMAGE}
 
-    # Wait a moment for container to start
     sleep 2
 
-    # Check if backend started successfully
     if container_running $BACKEND_CONTAINER; then
         print_status "Backend container started successfully"
-        print_status "Backend will load secrets from /app/secrets/ (mounted from ${secrets_path})"
     else
         print_error "Backend container failed to start"
         docker logs ${BACKEND_CONTAINER}
@@ -232,11 +199,10 @@ start_frontend() {
         return 0
     fi
 
-    print_status "Build frontend container..."
-    docker build --build-arg NODE_ENV=development -t ${FRONTEND_IMAGE} ${FRONTEND_DOCKERFILE}
+    print_status "Build frontend container"
+    docker build --build-arg NODE_ENV=development --build-arg REACT_APP_API_URL=http://localhost:8080 -t ${FRONTEND_IMAGE} ${FRONTEND_DOCKERFILE}
 
-    print_status "Starting frontend container..."
-    # frontend starts in prod mode, there is no call to gcloud store, so its ok
+    print_status "Starting frontend container"
     docker run \
       --name ${FRONTEND_CONTAINER} \
       -p ${FRONTEND_PORT}:${FRONTEND_PORT} \

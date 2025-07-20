@@ -17,15 +17,6 @@ provider "google" {
   region  = var.region
 }
 
-# provider "google" {
-#   alias                       = "impersonate_db"
-#   project                     = var.project_id
-#   region                      = var.region
-#   impersonate_service_account = google_service_account.db_access.email
-# }
-
-
-
 resource "google_cloud_run_service" "safehouse_backend" {
   name     = "safehouse-backend"
   location = var.region

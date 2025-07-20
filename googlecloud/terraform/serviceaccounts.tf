@@ -9,9 +9,9 @@ data "google_service_account" "terraform_cicd" {
   project    = var.project_id
 }
 
-# resource "google_service_account" "db_access" {
-#   account_id   = "db-acc"
-#   display_name = "Safehouse Database Access"
-#   description  = "Service account for database access with IAM authentication"
-# }
+resource "google_service_account" "db_access" {
+  account_id   = "db-acc"
+  display_name = "Safehouse Database Access"
+  description  = "Service account for database access with IAM authentication"
+}
 

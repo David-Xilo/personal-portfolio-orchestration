@@ -3,21 +3,6 @@ name: Deploy Railway Infrastructure
 on:
   workflow_dispatch:
     inputs:
-      backend_version:
-        description: 'Backend Docker image version (e.g., v1.2.3)'
-        default: 'latest'
-        required: true
-        type: string
-      frontend_version:
-        description: 'Frontend Docker image version (e.g., v2.1.0)'
-        default: 'latest'
-        required: true
-        type: string
-      migration_version:
-        description: 'Migration Docker image version (e.g., v1.0.5)'
-        default: 'latest'
-        required: true
-        type: string
       environment:
         description: 'Deployment environment'
         required: true
@@ -26,10 +11,6 @@ on:
         options:
           - production
 
-env:
-  RAILWAY_PROJECT_ID: 03936bb2-d116-4765-beeb-c29074266234
-  DOCKER_REGISTRY: xilo
-
 jobs:
   check-docker-images:
     runs-on: ubuntu-latest
@@ -37,11 +18,11 @@ jobs:
     steps:
       - name: Verify Docker images exist
         run: |
-          echo "🔍 Verifying Docker images exist on Docker Hub..."
+          echo "Verifying Docker images exist on Docker Hub"
           
-          BACKEND_IMAGE="${DOCKER_REGISTRY}/safehouse-backend-main:${{ inputs.backend_version }}"
-          FRONTEND_IMAGE="${DOCKER_REGISTRY}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          MIGRATION_IMAGE="${DOCKER_REGISTRY}/safehouse-migrations:${{ inputs.migration_version }}"
+          BACKEND_IMAGE="xilo/safehouse-backend-main:latest"
+          FRONTEND_IMAGE="xilo/safehouse-frontend-main:latest"
+          MIGRATION_IMAGE="xilo/safehouse-migrations:latest"
           
           # Check backend image
           if ! docker manifest inspect $BACKEND_IMAGE > /dev/null 2>&1; then
@@ -63,65 +44,18 @@ jobs:
           
           echo "✅ All Docker images verified successfully"
 
-  infrastructure-check:
-    runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
-    timeout-minutes: 10
-    env:
-      RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Ensure PostgreSQL service exists
-        run: |
-          echo "🐘 Ensuring PostgreSQL service exists..."
-          railway link --project "${{ env.RAILWAY_PROJECT_ID }}" --service postgres
-          if ! railway status | grep -q -i postgres; then
-            railway add --database postgres
-          else
-            echo "✅ PostgreSQL service already exists"
-          fi
-
-  run-migrations:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    container: ghcr.io/railwayapp/cli:latest
-    needs: [check-docker-images, infrastructure-check]
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-    steps:
-      - name: Run database migrations
-        run: |
-          TIMESTAMP=$(date +%s)
-          SERVICE_NAME="migration-${TIMESTAMP}"
-          echo "🚀 Deploying migration service: $SERVICE_NAME"
-          railway add \
-            --service "$SERVICE_NAME" \
-            --image "${{ env.DOCKER_REGISTRY }}/safehouse-migrations:${{ inputs.migration_version }}" \
-            --variables "DATABASE_URL=${DATABASE_URL}" \
-            --variables "MIGRATION_TIMEOUT=300" \
-            --variables "MIGRATION_VERBOSE=true" \
-            --version
-          sleep 10
-
   deploy-backend:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: run-migrations
+    needs: check-docker-images
     container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     steps:
       - name: Deploy backend
         run: |
-          echo "🚀 Deploying backend image: ${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}"
-          railway add \
-              --service safehouse-backend-main \
-              --image "${{ env.DOCKER_REGISTRY }}/safehouse-backend-main:${{ inputs.backend_version }}" \
-              --variables "PORT=8080" \
-              --variables "GIN_MODE=release" \
-              --variables "DATABASE_URL=${DATABASE_URL}"
-          railway up --service safehouse-backend-main
+          echo "🚀 Deploying backend image: xilo/safehouse-backend-main:latest"
+          railway redeploy --service safehouse-backend-main
           echo "✅ Backend deployment initiated."
 
   deploy-frontend:
@@ -134,11 +68,8 @@ jobs:
     steps:
       - name: Deploy frontend
         run: |
-          echo "🚀 Deploying frontend image: ${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          railway add \
-              --service safehouse-frontend-main \
-              --image "${{ env.DOCKER_REGISTRY }}/safehouse-frontend-main:${{ inputs.frontend_version }}"
-          railway up --service safehouse-frontend-main
+          echo "🚀 Deploying frontend image: xilo/safehouse-frontend-main:latest"
+          railway redeploy --service safehouse-frontend-main
           echo "✅ Frontend deployment initiated."
 
   post-deployment:
@@ -156,5 +87,4 @@ jobs:
           railway status
           echo "💰 Current usage:"
           railway usage
-          echo "🎉 Done! Check it here:"
-          echo "https://railway.app/project/${{ env.RAILWAY_PROJECT_ID }}"
+          echo "🎉 Done!"
