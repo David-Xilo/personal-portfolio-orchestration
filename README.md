@@ -1,20 +1,21 @@
 # safehouse-orchestration
-safehouse orchestration
+Safehouse orchestration repository
 
-# Setup commands
+Check related projects:
+- https://github.com/David-Xilo/safehouse-main-back
+- https://github.com/David-Xilo/safehouse-db-schema
+- https://github.com/David-Xilo/safehouse-main-front
 
-#### To run locally
+# To run locally
 
-gcloud auth login
+run the script "orchestration_script.sh"
 
-gcloud config set project personal-portfolio-safehouse
+# To redeploy current versions to railway
 
-gcloud auth application-default login
+By running the gh action you trigger the redeployment of latest version to railway
 
-terraform init
+# Unused Terraform
 
-# Permissions added manually
+The platform changed from gcloud to railway because of cost.
 
-chmod +x bootstrap.sh
-
-./bootstrap.sh
+Terraform is unused, kept just documentation.
