@@ -87,20 +87,3 @@ jobs:
           echo "🚀 Deploying frontend image: xilo/safehouse-frontend-main:latest"
           railway redeploy --service safehouse-frontend-main --yes
           echo "✅ Frontend deployment initiated."
-
-  post-deployment:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: deploy-frontend
-    container: ghcr.io/railwayapp/cli:latest
-    if: always()
-    env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-    steps:
-      - name: Show status and usage
-        run: |
-          echo "📊 Final deployment status:"
-          railway status
-          echo "💰 Current usage:"
-          railway usage
-          echo "🎉 Done!"
