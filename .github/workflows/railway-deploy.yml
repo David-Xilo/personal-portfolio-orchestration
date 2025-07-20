@@ -44,10 +44,26 @@ jobs:
           
           echo "✅ All Docker images verified successfully"
 
-  deploy-backend:
+  run-migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: check-docker-images
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - name: Deploy backend
+        run: |
+          echo "🚀 Deploying backend image: xilo/safehouse-migrations:latest"
+          railway redeploy --service safehouse-migrations
+          echo "✅ Migrations deployment initiated. Waiting 10s"
+          sleep 10
+          
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: run-migrations
     container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
