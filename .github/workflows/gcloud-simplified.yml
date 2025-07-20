@@ -1,4 +1,4 @@
-name: Gcloud Deployment Simplified (unused)
+name: [UNUSED] Gcloud Deployment Simplified
 
 on:
   workflow_dispatch:
@@ -99,7 +99,7 @@ jobs:
 
       - name: Check Migration Image Exists
         run: |
-          echo "Checking for migration image..."
+          echo "Checking for migration image"
           MIGRATION_TAG="${{ github.event.inputs.migration_image_tag }}"
           MIGRATION_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-migrations:${MIGRATION_TAG}"
           
@@ -113,7 +113,7 @@ jobs:
 
       - name: Check Backend Image Exists
         run: |
-          echo "Checking for backend image..."
+          echo "Checking for backend image"
           BACKEND_TAG="${{ github.event.inputs.backend_image_tag }}"
           BACKEND_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-backend-main:${BACKEND_TAG}"
           
@@ -126,7 +126,7 @@ jobs:
 
       - name: Check Frontend Image Exists
         run: |
-          echo "Checking for frontend image..."
+          echo "Checking for frontend image"
           FRONTEND_TAG="${{ github.event.inputs.frontend_image_tag }}"
           FRONTEND_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-frontend-main:${FRONTEND_TAG}"
           
@@ -139,7 +139,7 @@ jobs:
 
       - name: Check Postgres Image Exists
         run: |
-          echo "Checking for postgres image..."
+          echo "Checking for postgres image"
           POSTGRES_TAG="${{ github.event.inputs.postgres_image_tag }}"
           POSTGRES_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/safehouse-postgres:${POSTGRES_TAG}"
           
@@ -272,7 +272,7 @@ jobs:
       - name: Verify Deployment
         if: github.event.inputs.action == 'apply'
         run: |
-          echo "Verifying deployment status..."
+          echo "Verifying deployment status"
           
           BACKEND_URL=$(cd terraform && terraform output -raw cloud_run_url)
           echo "Backend URL: $BACKEND_URL"

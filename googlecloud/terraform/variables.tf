@@ -80,7 +80,7 @@ variable "google_access_token" {
   description = "Google Cloud access token for containers"
   type        = string
   default     = ""
-  # sensitive   = true
+  sensitive   = true
 }
 
 variable "connection_name" {

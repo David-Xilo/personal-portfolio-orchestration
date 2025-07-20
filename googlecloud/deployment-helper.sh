@@ -26,7 +26,7 @@ function show_help() {
 }
 
 function get_latest_image() {
-    echo "🔍 Getting latest deployment info..."
+    echo "🔍 Getting latest deployment info"
 
     DEPLOYMENT_INFO=$(gcloud secrets versions access latest \
         --secret="safehouse-latest-deployment" \
@@ -57,7 +57,7 @@ function show_deploy_info() {
 }
 
 function update_terraform() {
-    echo "Updating Terraform configuration..."
+    echo "Updating Terraform configuration"
 
     # Get latest image
     DEPLOYMENT_INFO=$(gcloud secrets versions access latest \

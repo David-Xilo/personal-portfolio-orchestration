@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Verify Docker images exist
         run: |
-          echo "🔍 Verifying Docker images exist on Docker Hub..."
+          echo "Verifying Docker images exist on Docker Hub"
           
           BACKEND_IMAGE="xilo/safehouse-backend-main:latest"
           FRONTEND_IMAGE="xilo/safehouse-frontend-main:latest"
@@ -87,5 +87,4 @@ jobs:
           railway status
           echo "💰 Current usage:"
           railway usage
-          echo "🎉 Done! Check it here:"
-          echo "https://railway.app/project/${{ secrets.RAILWAY_PROJECT_ID }}"
+          echo "🎉 Done!"
