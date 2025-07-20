@@ -55,7 +55,7 @@ jobs:
       - name: Deploy backend
         run: |
           echo "🚀 Deploying backend image: xilo/safehouse-migrations:latest"
-          railway redeploy --service safehouse-migrations
+          railway redeploy --service safehouse-migrations --ci
           echo "✅ Migrations deployment initiated. Waiting 10s"
           sleep 10
           
@@ -71,7 +71,7 @@ jobs:
       - name: Deploy backend
         run: |
           echo "🚀 Deploying backend image: xilo/safehouse-backend-main:latest"
-          railway redeploy --service safehouse-backend-main
+          railway redeploy --service safehouse-backend-main --ci
           echo "✅ Backend deployment initiated."
 
   deploy-frontend:
@@ -85,7 +85,7 @@ jobs:
       - name: Deploy frontend
         run: |
           echo "🚀 Deploying frontend image: xilo/safehouse-frontend-main:latest"
-          railway redeploy --service safehouse-frontend-main
+          railway redeploy --service safehouse-frontend-main --ci
           echo "✅ Frontend deployment initiated."
 
   post-deployment:
