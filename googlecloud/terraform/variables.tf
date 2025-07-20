@@ -13,7 +13,7 @@ variable "region" {
 variable "authorized_user_email" {
   description = "Email address of the authorized user for Cloud Run access"
   type        = string
-  default     = "david.dbmoura@gmail.com"
+  default     = ""
 }
 
 variable "backend_github_repository" {

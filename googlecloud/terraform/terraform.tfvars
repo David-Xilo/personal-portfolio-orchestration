@@ -1,6 +1,5 @@
 project_id                      = "personal-portfolio-safehouse"
 region                          = "us-central1"
-authorized_user_email           = "david.dbmoura@gmail.com"
 backend_github_repository       = "safehouse-main-back"
 frontend_github_repository      = "safehouse-main-front"
 migrations_github_repository    = "safehouse-db-schema"
