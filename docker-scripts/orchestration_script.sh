@@ -5,9 +5,9 @@ set -e
 
 NETWORK_NAME="safehouse_dev_network"
 
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost
 BACKEND_PORT=4000
-FRONTEND_PORT=3000
+FRONTEND_PORT=80
 
 POSTGRES_IMAGE="safehouse_postgres_dev_image"
 MIGRATION_IMAGE="safehouse_migrations_image"
