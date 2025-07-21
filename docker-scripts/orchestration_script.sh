@@ -39,9 +39,6 @@ POSTGRES_VOLUME=safehouse_postgres_volume
 
 NETWORK_ALIAS=${POSTGRES_HOST}
 
-DEV_JWT_SECRET="dev-jwt-secret-key-for-local-development-only-please-change-in-production"
-DEV_DB_PASSWORD="${POSTGRES_PASSWORD}"
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
