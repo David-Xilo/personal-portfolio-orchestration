@@ -168,7 +168,7 @@ start_backend() {
     docker run \
         -e ENV=development \
         -e DATABASE_URL="${DATABASE_URL}" \
-        -e FRONTEND_URL=${FRONTEND_URL} \
+        -e ALLOWED_ORIGINS=${FRONTEND_URL} \
         -e PORT=${BACKEND_PORT} \
         --network ${NETWORK_NAME} \
         --name ${BACKEND_CONTAINER} \
