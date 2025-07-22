@@ -5,7 +5,7 @@ set -e
 
 NETWORK_NAME="safehouse_dev_network"
 
-FRONTEND_URL=http://localhost
+FRONTEND_URL=http://localhost,https://localhost
 BACKEND_PORT=4000
 FRONTEND_PORT=80
 
