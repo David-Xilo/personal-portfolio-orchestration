@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "build": {
-    "dockerImage": "xilo/safehouse-frontend-main:latest"
+    "dockerImage": "xilo/personal-portfolio-frontend-main:latest"
   },
   "deploy": {
     "healthcheckPath": "/",

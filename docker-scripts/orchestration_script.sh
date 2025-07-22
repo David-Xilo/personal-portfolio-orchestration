@@ -3,28 +3,28 @@
 
 set -e
 
-NETWORK_NAME="safehouse_dev_network"
+NETWORK_NAME="personal-portfolio_dev_network"
 
 FRONTEND_URL=http://localhost,https://localhost
 BACKEND_PORT=4000
 FRONTEND_PORT=80
 
-POSTGRES_IMAGE="safehouse_postgres_dev_image"
-MIGRATION_IMAGE="safehouse_migrations_image"
-BACKEND_IMAGE="safehouse_backend_image"
-FRONTEND_IMAGE="safehouse_frontend_image"
+POSTGRES_IMAGE="personal-portfolio_postgres_dev_image"
+MIGRATION_IMAGE="personal-portfolio_migrations_image"
+BACKEND_IMAGE="personal-portfolio_backend_image"
+FRONTEND_IMAGE="personal-portfolio_frontend_image"
 
-POSTGRES_CONTAINER="safehouse_postgres_dev"
-MIGRATION_CONTAINER="safehouse_migrations"
-BACKEND_CONTAINER="safehouse_backend"
-FRONTEND_CONTAINER="safehouse_frontend"
+POSTGRES_CONTAINER="personal-portfolio_postgres_dev"
+MIGRATION_CONTAINER="personal-portfolio_migrations"
+BACKEND_CONTAINER="personal-portfolio_backend"
+FRONTEND_CONTAINER="personal-portfolio_frontend"
 
-POSTGRES_DOCKERFILE="../../safehouse-db-schema/postgresql"
-MIGRATION_DOCKERFILE="../../safehouse-db-schema/schema/dev/Dockerfile"
-BACKEND_DOCKERFILE="../../safehouse-main-back"
-FRONTEND_DOCKERFILE="../../safehouse-main-front"
+POSTGRES_DOCKERFILE="../../personal-portfolio-db-schema/postgresql"
+MIGRATION_DOCKERFILE="../../personal-portfolio-db-schema/schema/dev/Dockerfile"
+BACKEND_DOCKERFILE="../../personal-portfolio-main-back"
+FRONTEND_DOCKERFILE="../../personal-portfolio-main-front"
 
-MIGRATION_CONTEXT="../../safehouse-db-schema/schema"
+MIGRATION_CONTEXT="../../personal-portfolio-db-schema/schema"
 
 POSTGRES_HOST="postgres-dev"
 POSTGRES_PORT="5432"
@@ -35,7 +35,7 @@ POSTGRES_DB="dev_db"
 # "postgres://dev_user:mypassword@postgres-dev:5432/dev_db?sslmode=disable"
 DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
 
-POSTGRES_VOLUME=safehouse_postgres_volume
+POSTGRES_VOLUME=personal-portfolio_postgres_volume
 
 NETWORK_ALIAS=${POSTGRES_HOST}
 

@@ -1,10 +1,10 @@
-# safehouse-orchestration
-Safehouse orchestration repository
+# personal-portfolio-orchestration
+Personal Portfolio orchestration repository
 
 Check related projects:
-- **Frontend**: https://github.com/David-Xilo/safehouse-main-front
-- **Backend**: https://github.com/David-Xilo/safehouse-main-back
-- **Database**: https://github.com/David-Xilo/safehouse-db-schema
+- **Frontend**: https://github.com/David-Xilo/personal-portfolio-main-front
+- **Backend**: https://github.com/David-Xilo/personal-portfolio-main-back
+- **Database**: https://github.com/David-Xilo/personal-portfolio-db-schema
 
 # To run locally
 
