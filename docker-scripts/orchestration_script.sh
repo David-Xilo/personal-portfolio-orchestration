@@ -238,7 +238,7 @@ cleanup() {
         rm -rf ./dev-secrets
     fi
 
-    print_status "Cleanup completed (including local secrets)"
+    print_status "Cleanup completed"
 }
 
 migration_command() {
@@ -268,6 +268,7 @@ case "${1:-start}" in
     "start")
         print_section "Starting Complete Development Environment"
         print_status "Cleanup first"
+        stop_services
         cleanup
         print_status "Starting now"
         create_network
