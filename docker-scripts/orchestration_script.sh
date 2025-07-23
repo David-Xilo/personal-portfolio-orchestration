@@ -291,6 +291,7 @@ case "${1:-start}" in
         start_frontend
         ;;
     "clean")
+        stop_services
         cleanup
         ;;
     "migrate")
