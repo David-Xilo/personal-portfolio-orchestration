@@ -21,8 +21,10 @@ FRONTEND_CONTAINER="personal-portfolio_frontend"
 
 POSTGRES_DOCKERFILE="../../personal-portfolio-db-schema/postgresql"
 MIGRATION_DOCKERFILE="../../personal-portfolio-db-schema/schema/dev/Dockerfile"
-BACKEND_DOCKERFILE="../../personal-portfolio-main-back"
-FRONTEND_DOCKERFILE="../../personal-portfolio-main-front"
+OLD_BACKEND_DOCKERFILE="../../personal-portfolio-main-back-v2"
+OLD_FRONTEND_DOCKERFILE="../../personal-portfolio-main-front-v2"
+BACKEND_DOCKERFILE="../../personal-portfolio-main-back-v2"
+FRONTEND_DOCKERFILE="../../personal-portfolio-main-front-v2"
 
 MIGRATION_CONTEXT="../../personal-portfolio-db-schema/schema"
 
@@ -45,6 +47,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+
+echo -e "${YELLOW}[WARN] Backend changed from ${OLD_BACKEND_DOCKERFILE} to ${BACKEND_DOCKERFILE} $1"
+echo -e "${YELLOW}[WARN] Frontend changed from ${OLD_FRONTEND_DOCKERFILE} to ${FRONTEND_DOCKERFILE} $1"
 
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
