@@ -200,7 +200,7 @@ start_frontend() {
     fi
 
     print_status "Build frontend container"
-    docker build --build-arg NODE_ENV=development --build-arg REACT_APP_API_URL=http://localhost:4000 -t ${FRONTEND_IMAGE} ${FRONTEND_DOCKERFILE}
+    docker build --build-arg NODE_ENV=production --build-arg VITE_API_URL=http://localhost:4000 -t ${FRONTEND_IMAGE} ${FRONTEND_DOCKERFILE}
 
     print_status "Starting frontend container"
     docker run \
