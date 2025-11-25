@@ -2,8 +2,8 @@
 Personal Portfolio orchestration repository
 
 Check related projects:
-- **New Frontend**: https://github.com/David-Xilo/personal-portfolio-main-front-v2
-- **New Backend**: https://github.com/David-Xilo/personal-portfolio-main-back-v2
+- **Frontend**: https://github.com/David-Xilo/personal-portfolio-main-front-v2
+- **Backend**: https://github.com/David-Xilo/personal-portfolio-main-back-v2
 - **Database**: https://github.com/David-Xilo/personal-portfolio-db-schema
 
 # To run locally
