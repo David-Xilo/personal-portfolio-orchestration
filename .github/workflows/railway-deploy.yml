@@ -71,7 +71,7 @@ jobs:
       - name: Deploy backend
         run: |
           echo "🚀 Deploying backend image: xilo/personal-portfolio-backend-main-v2:latest"
-          railway redeploy --service personal-portfolio-backend-main --yes
+          railway redeploy --service personal-portfolio-backend-main-v2 --yes
           echo "✅ Backend deployment initiated."
 
   deploy-frontend:
@@ -85,5 +85,5 @@ jobs:
       - name: Deploy frontend
         run: |
           echo "🚀 Deploying frontend image: xilo/personal-portfolio-frontend-main-v2:latest"
-          railway redeploy --service personal-portfolio-frontend-main --yes
+          railway redeploy --service personal-portfolio-frontend-main-v2 --yes
           echo "✅ Frontend deployment initiated."
