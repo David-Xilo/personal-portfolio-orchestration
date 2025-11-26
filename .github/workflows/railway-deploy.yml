@@ -20,8 +20,8 @@ jobs:
         run: |
           echo "Verifying Docker images exist on Docker Hub"
           
-          BACKEND_IMAGE="xilo/personal-portfolio-backend-main:latest"
-          FRONTEND_IMAGE="xilo/personal-portfolio-frontend-main:latest"
+          BACKEND_IMAGE="xilo/personal-portfolio-backend-main-v2:latest"
+          FRONTEND_IMAGE="xilo/personal-portfolio-frontend-main-v2:latest"
           MIGRATION_IMAGE="xilo/personal-portfolio-migrations:latest"
           
           # Check backend image
@@ -70,7 +70,7 @@ jobs:
     steps:
       - name: Deploy backend
         run: |
-          echo "🚀 Deploying backend image: xilo/personal-portfolio-backend-main:latest"
+          echo "🚀 Deploying backend image: xilo/personal-portfolio-backend-main-v2:latest"
           railway redeploy --service personal-portfolio-backend-main --yes
           echo "✅ Backend deployment initiated."
 
@@ -84,6 +84,6 @@ jobs:
     steps:
       - name: Deploy frontend
         run: |
-          echo "🚀 Deploying frontend image: xilo/personal-portfolio-frontend-main:latest"
+          echo "🚀 Deploying frontend image: xilo/personal-portfolio-frontend-main-v2:latest"
           railway redeploy --service personal-portfolio-frontend-main --yes
           echo "✅ Frontend deployment initiated."
